@@ -1,4 +1,4 @@
-# sample_code
+# thesis
 
 A new Flutter project.
 
