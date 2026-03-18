@@ -148,7 +148,7 @@ class _LoginPageState extends State<LoginPage> {
                           child: TextFormField(
                             controller: _emailController,
                             onChanged: (_) => _controller.clearError(),
-                            decoration: _inputDecoration('Username'),
+                            decoration: _inputDecoration('Email'),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Please enter your email';

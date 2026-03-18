@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 
 import '../../controllers/home_controller.dart';
 import '../../models/profile_model.dart';
-import '../auth/auth_gate.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -46,12 +45,6 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             onPressed: () async {
               await _controller.signOut();
-              if (!mounted) return;
-
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const AuthGate()),
-                (route) => false,
-              );
             },
             icon: const Icon(Icons.logout),
           ),

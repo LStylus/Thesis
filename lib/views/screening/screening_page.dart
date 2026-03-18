@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../controllers/screening_controller.dart';
 import '../auth/auth_gate.dart';
+import 'screening_recordings_test_page.dart';
 
 class ScreeningPage extends StatefulWidget {
   final int childAge;
@@ -45,15 +46,33 @@ class _ScreeningPageState extends State<ScreeningPage> {
     return false;
   }
 
+  // Future<void> _handleNext() async {
+  //   final finished = await _controller.goNext();
+
+  //   if (!mounted) return;
+
+  //   if (finished) {
+  //     Navigator.of(context).pushAndRemoveUntil(
+  //       MaterialPageRoute(builder: (_) => const AuthGate()),
+  //       (route) => false,
+  //     );
+  //   }
+  // }
+
+  //will delete
   Future<void> _handleNext() async {
     final finished = await _controller.goNext();
 
     if (!mounted) return;
 
     if (finished) {
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const AuthGate()),
-        (route) => false,
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => ScreeningRecordingsTestPage(
+            words: _controller.words,
+            recordingsByWordId: _controller.recordingsByWordId,
+          ),
+        ),
       );
     }
   }

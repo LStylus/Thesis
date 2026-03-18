@@ -27,6 +27,8 @@ class ScreeningController extends ChangeNotifier {
   bool hasMicPermission = false;
   bool isRecorderReady = false;
 
+  bool _isInitializingRecorder = false;
+
   String? _activeRecordingPath;
   String? errorMessage;
 
@@ -52,7 +54,14 @@ class ScreeningController extends ChangeNotifier {
   }
 
   Future<void> _initRecorder() async {
+    if (_isInitializingRecorder) return;
+    if (isRecorderReady && hasMicPermission) return;
+
+    _isInitializingRecorder = true;
+
     try {
+      errorMessage = null;
+
       if (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.macOS) {
@@ -63,8 +72,8 @@ class ScreeningController extends ChangeNotifier {
       }
 
       if (!hasMicPermission) {
+        isRecorderReady = false;
         errorMessage = 'Microphone permission was denied.';
-        notifyListeners();
         return;
       }
 
@@ -75,10 +84,13 @@ class ScreeningController extends ChangeNotifier {
       );
 
       _recorder.start();
+
       isRecorderReady = true;
-    } catch (_) {
+    } catch (e) {
       isRecorderReady = false;
-      errorMessage = 'Recorder setup failed.';
+      errorMessage = 'Recorder setup failed: $e';
+    } finally {
+      _isInitializingRecorder = false;
       notifyListeners();
     }
   }
@@ -89,6 +101,9 @@ class ScreeningController extends ChangeNotifier {
   int get totalSteps => _words.length;
   bool get isLastWord => _currentIndex == _words.length - 1;
   ScreeningWordModel get currentWord => _words[_currentIndex];
+  //will remove
+  Map<String, String> get recordingsByWordId =>
+      Map.unmodifiable(_recordingsByWordId);
 
   bool get hasRecording => _recordingsByWordId.containsKey(currentWord.id);
   String? get currentRecordingPath => _recordingsByWordId[currentWord.id];
@@ -102,11 +117,14 @@ class ScreeningController extends ChangeNotifier {
       !isProcessing;
 
   void clearError() {
+    if (errorMessage == null) return;
     errorMessage = null;
     notifyListeners();
   }
 
   Future<void> refreshPermission() async {
+    hasMicPermission = false;
+    isRecorderReady = false;
     await _initRecorder();
   }
 
@@ -125,6 +143,12 @@ class ScreeningController extends ChangeNotifier {
   }
 
   Future<void> startTimedRecording() async {
+    if (_isInitializingRecorder) return;
+
+    if (!isRecorderReady || !hasMicPermission) {
+      await _initRecorder();
+    }
+
     if (!canRecord) return;
 
     clearError();
@@ -150,11 +174,11 @@ class ScreeningController extends ChangeNotifier {
       _autoStopTimer = Timer(_autoRecordDuration, () async {
         await stopRecording();
       });
-    } catch (_) {
+    } catch (e) {
       isRecording = false;
       isProcessing = false;
       _activeRecordingPath = null;
-      errorMessage = 'Unable to start recording.';
+      errorMessage = 'Unable to start recording: $e';
       notifyListeners();
     }
   }
@@ -174,8 +198,7 @@ class ScreeningController extends ChangeNotifier {
       if (finalPath != null && finalPath.isNotEmpty) {
         final file = File(finalPath);
 
-        // Give the file system a moment to finalize the WAV file.
-        await Future.delayed(const Duration(milliseconds: 150));
+        await Future.delayed(const Duration(milliseconds: 200));
 
         if (await file.exists()) {
           final size = await file.length();
@@ -194,12 +217,12 @@ class ScreeningController extends ChangeNotifier {
 
       _activeRecordingPath = null;
       notifyListeners();
-    } catch (_) {
+    } catch (e) {
       _autoStopTimer?.cancel();
       _autoStopTimer = null;
       isRecording = false;
       _activeRecordingPath = null;
-      errorMessage = 'Failed to stop recording.';
+      errorMessage = 'Failed to stop recording: $e';
       notifyListeners();
     }
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../models/profile_model.dart';
 import '../screening/screening_page.dart';
 
 class ChildInfoPage extends StatefulWidget {
@@ -43,21 +44,6 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     _childNameController.dispose();
     _birthDateController.dispose();
     super.dispose();
-  }
-
-  int _calculateAge(DateTime birthDate) {
-    final today = DateTime.now();
-    int age = today.year - birthDate.year;
-
-    final hasHadBirthdayThisYear =
-        (today.month > birthDate.month) ||
-        (today.month == birthDate.month && today.day >= birthDate.day);
-
-    if (!hasHadBirthdayThisYear) {
-      age--;
-    }
-
-    return age;
   }
 
   InputDecoration _inputDecoration(String hintText, {Widget? suffixIcon}) {
@@ -154,7 +140,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     if (!mounted) return;
 
     if (ok) {
-      final childAge = _calculateAge(_selectedDate!);
+      final childAge = ProfileModel.calculateAge(_selectedDate!);
 
       Navigator.push(
         context,

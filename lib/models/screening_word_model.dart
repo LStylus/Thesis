@@ -35,7 +35,11 @@ class ScreeningWordModel {
   String get audioAssetPath => 'audio/screening/$audioId.mp3';
 
   static List<ScreeningWordModel> resolveForAge(int age) {
-    if (age <= 4) return age4Words;
+    if (age < 4 || age > 8) {
+      throw ArgumentError('Supported age range is 4 to 8.');
+    }
+
+    if (age == 4) return age4Words;
     if (age == 5) return age5Words;
     if (age == 6 || age == 7) return age6To7Words;
     return age8Words;
@@ -598,15 +602,7 @@ class ScreeningWordModel {
       minAge: 8,
       maxAge: 8,
     ),
-    ScreeningWordModel(
-      id: 'this_age8_initial',
-      audioId: 'this',
-      displayWord: 'THIS',
-      phonemeProcess: '/th/ (Voiced)',
-      position: ScreeningWordPosition.initial,
-      minAge: 8,
-      maxAge: 8,
-    ),
+
     ScreeningWordModel(
       id: 'feather_age8_medial',
       audioId: 'feather',

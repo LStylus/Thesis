@@ -60,9 +60,8 @@ class AuthController extends ChangeNotifier {
     required String email,
     required String password,
   }) async {
-    _setLoading(true);
     errorMessage = null;
-    notifyListeners();
+    _setLoading(true);
 
     try {
       final cleanEmail = email.trim();
@@ -78,18 +77,14 @@ class AuthController extends ChangeNotifier {
       }
 
       pendingUid = user.uid;
+      _draft = _draft.copyWith(email: cleanEmail);
 
-      _draft = _draft.copyWith(email: cleanEmail, password: password);
-
-      notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
       errorMessage = _friendlySignupError(e.code);
-      notifyListeners();
       return false;
     } catch (_) {
       errorMessage = 'Signup failed. Please try again.';
-      notifyListeners();
       return false;
     } finally {
       _setLoading(false);
@@ -97,9 +92,8 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<bool> completeSignup() async {
-    _setLoading(true);
     errorMessage = null;
-    notifyListeners();
+    _setLoading(true);
 
     try {
       final currentUser = _authService.currentUser;
@@ -107,20 +101,18 @@ class AuthController extends ChangeNotifier {
 
       if (uid == null) {
         errorMessage = 'Signup session expired. Please start again.';
-        notifyListeners();
         return false;
       }
 
       final birthDate = _draft.childBirthDate;
       if (birthDate == null) {
         errorMessage = 'Child birth date is required.';
-        notifyListeners();
         return false;
       }
 
       final appUser = AppUserModel(
         userId: uid,
-        username: _draft.email,
+        email: _draft.email,
         createdAt: DateTime.now(),
       );
 
@@ -138,13 +130,10 @@ class AuthController extends ChangeNotifier {
 
       await _userService.createUserAndProfile(user: appUser, profile: profile);
 
-      // No longer a pending signup once saved.
       pendingUid = null;
-
       return true;
     } catch (_) {
       errorMessage = 'Could not save profile data. Please try again.';
-      notifyListeners();
       return false;
     } finally {
       _setLoading(false);
@@ -180,26 +169,32 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<bool> login({required String email, required String password}) async {
-    _setLoading(true);
     errorMessage = null;
-    notifyListeners();
+    _setLoading(true);
 
     try {
       await _authService.signInWithEmailPassword(
         email: email.trim(),
         password: password,
       );
+
+      errorMessage = null;
+      notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
       errorMessage = _friendlyLoginError(e.code);
+      isLoading = false;
       notifyListeners();
       return false;
-    } catch (_) {
+    } catch (e) {
       errorMessage = 'Login failed. Please try again.';
+      isLoading = false;
       notifyListeners();
       return false;
     } finally {
-      _setLoading(false);
+      if (isLoading) {
+        _setLoading(false);
+      }
     }
   }
 
@@ -247,7 +242,7 @@ class AuthController extends ChangeNotifier {
       case 'operation-not-allowed':
         return 'Email/password login is not enabled in Firebase.';
       default:
-        return 'Login error: $code';
-    }
+        return 'Incorrect email or password.';
+    } //   Signup error: $code
   }
 }

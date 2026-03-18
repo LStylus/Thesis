@@ -6,7 +6,6 @@ class ProfileModel {
   final String categoryId;
   final String courseNo;
 
-  // App-specific fields
   final String parentName;
   final String relationshipToChild;
   final String childName;
@@ -23,9 +22,9 @@ class ProfileModel {
     required this.childName,
   });
 
-  int get age => _calculateAge(birthDate);
+  int get age => calculateAge(birthDate);
 
-  static int _calculateAge(DateTime birthDate) {
+  static int calculateAge(DateTime birthDate) {
     final today = DateTime.now();
     int age = today.year - birthDate.year;
 
@@ -46,7 +45,7 @@ class ProfileModel {
       'userId': userId,
       'progressId': progressId,
       'birthDate': birthDate.toIso8601String(),
-      'age': age, // derived from birthDate
+      'age': age,
       'categoryId': categoryId,
       'courseNo': courseNo,
       'parentName': parentName,

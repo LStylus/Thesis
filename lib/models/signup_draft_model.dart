@@ -1,6 +1,5 @@
 class SignupDraftModel {
   final String email;
-  final String password;
   final String parentName;
   final String relationshipToChild;
   final String childName;
@@ -8,7 +7,6 @@ class SignupDraftModel {
 
   SignupDraftModel({
     this.email = '',
-    this.password = '',
     this.parentName = '',
     this.relationshipToChild = '',
     this.childName = '',
@@ -17,7 +15,6 @@ class SignupDraftModel {
 
   SignupDraftModel copyWith({
     String? email,
-    String? password,
     String? parentName,
     String? relationshipToChild,
     String? childName,
@@ -25,7 +22,6 @@ class SignupDraftModel {
   }) {
     return SignupDraftModel(
       email: email ?? this.email,
-      password: password ?? this.password,
       parentName: parentName ?? this.parentName,
       relationshipToChild: relationshipToChild ?? this.relationshipToChild,
       childName: childName ?? this.childName,
