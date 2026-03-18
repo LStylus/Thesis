@@ -142,8 +142,8 @@ class _ScreeningPageState extends State<ScreeningPage> {
                           textAlign: TextAlign.center,
                           style: const TextStyle(
                             color: _primaryBlue,
-                            fontSize: 30,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w900,
                             letterSpacing: 0.4,
                           ),
                         ),

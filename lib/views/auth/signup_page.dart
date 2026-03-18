@@ -167,8 +167,8 @@ class _SignupPageState extends State<SignupPage> {
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: _primaryBlue,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
                             ),
                           ),
                           const SizedBox(height: 8),

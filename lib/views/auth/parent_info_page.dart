@@ -101,7 +101,7 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
               textAlign: TextAlign.center,
               style: const TextStyle(
                 color: _primaryBlue,
-                fontSize: 22,
+                fontSize: 28,
                 fontWeight: FontWeight.w900,
               ),
             ),
