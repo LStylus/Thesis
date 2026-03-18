@@ -1,0 +1,667 @@
+enum ScreeningWordPosition { initial, medial, finalPosition }
+
+extension ScreeningWordPositionLabel on ScreeningWordPosition {
+  String get label {
+    switch (this) {
+      case ScreeningWordPosition.initial:
+        return 'Initial';
+      case ScreeningWordPosition.medial:
+        return 'Medial';
+      case ScreeningWordPosition.finalPosition:
+        return 'Final';
+    }
+  }
+}
+
+class ScreeningWordModel {
+  final String id;
+  final String audioId;
+  final String displayWord;
+  final String phonemeProcess;
+  final ScreeningWordPosition position;
+  final int minAge;
+  final int maxAge;
+
+  const ScreeningWordModel({
+    required this.id,
+    required this.audioId,
+    required this.displayWord,
+    required this.phonemeProcess,
+    required this.position,
+    required this.minAge,
+    required this.maxAge,
+  });
+
+  String get audioAssetPath => 'audio/screening/$audioId.mp3';
+
+  static List<ScreeningWordModel> resolveForAge(int age) {
+    if (age <= 4) return age4Words;
+    if (age == 5) return age5Words;
+    if (age == 6 || age == 7) return age6To7Words;
+    return age8Words;
+  }
+
+  // AGE 4
+  static const List<ScreeningWordModel> age4Words = [
+    ScreeningWordModel(
+      id: 'pig_age4_initial',
+      audioId: 'pig',
+      displayWord: 'PIG',
+      phonemeProcess: '/p, b, m, n/',
+      position: ScreeningWordPosition.initial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'ball_age4_initial',
+      audioId: 'ball',
+      displayWord: 'BALL',
+      phonemeProcess: '/p, b, m, n/',
+      position: ScreeningWordPosition.initial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'apple_age4_medial',
+      audioId: 'apple',
+      displayWord: 'APPLE',
+      phonemeProcess: '/p, b, m, n/',
+      position: ScreeningWordPosition.medial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'bunny_age4_medial',
+      audioId: 'bunny',
+      displayWord: 'BUNNY',
+      phonemeProcess: '/p, b, m, n/',
+      position: ScreeningWordPosition.medial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'cup_age4_final',
+      audioId: 'cup',
+      displayWord: 'CUP',
+      phonemeProcess: '/p, b, m, n/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'sun_age4_final_pbmn',
+      audioId: 'sun',
+      displayWord: 'SUN',
+      phonemeProcess: '/p, b, m, n/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 4,
+      maxAge: 4,
+    ),
+
+    ScreeningWordModel(
+      id: 'ten_age4_initial',
+      audioId: 'ten',
+      displayWord: 'TEN',
+      phonemeProcess: '/t, d/',
+      position: ScreeningWordPosition.initial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'dog_age4_initial',
+      audioId: 'dog',
+      displayWord: 'DOG',
+      phonemeProcess: '/t, d/',
+      position: ScreeningWordPosition.initial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'water_age4_medial',
+      audioId: 'water',
+      displayWord: 'WATER',
+      phonemeProcess: '/t, d/',
+      position: ScreeningWordPosition.medial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'ladder_age4_medial',
+      audioId: 'ladder',
+      displayWord: 'LADDER',
+      phonemeProcess: '/t, d/',
+      position: ScreeningWordPosition.medial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'boat_age4_final',
+      audioId: 'boat',
+      displayWord: 'BOAT',
+      phonemeProcess: '/t, d/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'bed_age4_final',
+      audioId: 'bed',
+      displayWord: 'BED',
+      phonemeProcess: '/t, d/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 4,
+      maxAge: 4,
+    ),
+
+    ScreeningWordModel(
+      id: 'key_age4_initial',
+      audioId: 'key',
+      displayWord: 'KEY',
+      phonemeProcess: '/k, g/ (Fronting)',
+      position: ScreeningWordPosition.initial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'goat_age4_initial',
+      audioId: 'goat',
+      displayWord: 'GOAT',
+      phonemeProcess: '/k, g/ (Fronting)',
+      position: ScreeningWordPosition.initial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'cookie_age4_medial',
+      audioId: 'cookie',
+      displayWord: 'COOKIE',
+      phonemeProcess: '/k, g/ (Fronting)',
+      position: ScreeningWordPosition.medial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'tiger_age4_medial',
+      audioId: 'tiger',
+      displayWord: 'TIGER',
+      phonemeProcess: '/k, g/ (Fronting)',
+      position: ScreeningWordPosition.medial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'bike_age4_final',
+      audioId: 'bike',
+      displayWord: 'BIKE',
+      phonemeProcess: '/k, g/ (Fronting)',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'pig_age4_final_kg',
+      audioId: 'pig',
+      displayWord: 'PIG',
+      phonemeProcess: '/k, g/ (Fronting)',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 4,
+      maxAge: 4,
+    ),
+
+    ScreeningWordModel(
+      id: 'fish_age4_initial',
+      audioId: 'fish',
+      displayWord: 'FISH',
+      phonemeProcess: '/f, w, y/',
+      position: ScreeningWordPosition.initial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'whale_age4_initial',
+      audioId: 'whale',
+      displayWord: 'WHALE',
+      phonemeProcess: '/f, w, y/',
+      position: ScreeningWordPosition.initial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'elephant_age4_medial',
+      audioId: 'elephant',
+      displayWord: 'ELEPHANT',
+      phonemeProcess: '/f, w, y/',
+      position: ScreeningWordPosition.medial,
+      minAge: 4,
+      maxAge: 4,
+    ),
+    ScreeningWordModel(
+      id: 'leaf_age4_final',
+      audioId: 'leaf',
+      displayWord: 'LEAF',
+      phonemeProcess: '/f, w, y/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 4,
+      maxAge: 4,
+    ),
+  ];
+
+  // AGE 5
+  static const List<ScreeningWordModel> age5Words = [
+    ScreeningWordModel(
+      id: 'sun_age5_initial_sz',
+      audioId: 'sun',
+      displayWord: 'SUN',
+      phonemeProcess: '/s, z/ (Stopping)',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'zebra_age5_initial',
+      audioId: 'zebra',
+      displayWord: 'ZEBRA',
+      phonemeProcess: '/s, z/ (Stopping)',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'pencil_age5_medial',
+      audioId: 'pencil',
+      displayWord: 'PENCIL',
+      phonemeProcess: '/s, z/ (Stopping)',
+      position: ScreeningWordPosition.medial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'lizard_age5_medial',
+      audioId: 'lizard',
+      displayWord: 'LIZARD',
+      phonemeProcess: '/s, z/ (Stopping)',
+      position: ScreeningWordPosition.medial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'bus_age5_final',
+      audioId: 'bus',
+      displayWord: 'BUS',
+      phonemeProcess: '/s, z/ (Stopping)',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'cheese_age5_final',
+      audioId: 'cheese',
+      displayWord: 'CHEESE',
+      phonemeProcess: '/s, z/ (Stopping)',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 5,
+      maxAge: 5,
+    ),
+
+    ScreeningWordModel(
+      id: 'yarn_age5_initial',
+      audioId: 'yarn',
+      displayWord: 'YARN',
+      phonemeProcess: '/h, y/',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'hat_age5_initial',
+      audioId: 'hat',
+      displayWord: 'HAT',
+      phonemeProcess: '/h, y/',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'yoyo_age5_medial',
+      audioId: 'yoyo',
+      displayWord: 'YOYO',
+      phonemeProcess: '/h, y/',
+      position: ScreeningWordPosition.medial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+
+    ScreeningWordModel(
+      id: 'shoe_age5_initial',
+      audioId: 'shoe',
+      displayWord: 'SHOE',
+      phonemeProcess: '/sh/',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'flashlight_age5_medial',
+      audioId: 'flashlight',
+      displayWord: 'FLASHLIGHT',
+      phonemeProcess: '/sh/',
+      position: ScreeningWordPosition.medial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'fish_age5_final_sh',
+      audioId: 'fish',
+      displayWord: 'FISH',
+      phonemeProcess: '/sh/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 5,
+      maxAge: 5,
+    ),
+
+    ScreeningWordModel(
+      id: 'spider_age5_initial',
+      audioId: 'spider',
+      displayWord: 'SPIDER',
+      phonemeProcess: 'S-Clusters',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'star_age5_initial',
+      audioId: 'star',
+      displayWord: 'STAR',
+      phonemeProcess: 'S-Clusters',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+
+    ScreeningWordModel(
+      id: 'blue_age5_initial',
+      audioId: 'blue',
+      displayWord: 'BLUE',
+      phonemeProcess: 'L-Clusters',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+    ScreeningWordModel(
+      id: 'plane_age5_initial',
+      audioId: 'plane',
+      displayWord: 'PLANE',
+      phonemeProcess: 'L-Clusters',
+      position: ScreeningWordPosition.initial,
+      minAge: 5,
+      maxAge: 5,
+    ),
+  ];
+
+  // AGE 6–7
+  static const List<ScreeningWordModel> age6To7Words = [
+    ScreeningWordModel(
+      id: 'lion_age67_initial',
+      audioId: 'lion',
+      displayWord: 'LION',
+      phonemeProcess: '/l/ (Gliding)',
+      position: ScreeningWordPosition.initial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'balloon_age67_medial',
+      audioId: 'balloon',
+      displayWord: 'BALLOON',
+      phonemeProcess: '/l/ (Gliding)',
+      position: ScreeningWordPosition.medial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'bell_age67_final',
+      audioId: 'bell',
+      displayWord: 'BELL',
+      phonemeProcess: '/l/ (Gliding)',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 6,
+      maxAge: 7,
+    ),
+
+    ScreeningWordModel(
+      id: 'rock_age67_initial',
+      audioId: 'rock',
+      displayWord: 'ROCK',
+      phonemeProcess: '/r/ (Gliding)',
+      position: ScreeningWordPosition.initial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'mirror_age67_medial',
+      audioId: 'mirror',
+      displayWord: 'MIRROR',
+      phonemeProcess: '/r/ (Gliding)',
+      position: ScreeningWordPosition.medial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'star_age67_final_r',
+      audioId: 'star',
+      displayWord: 'STAR',
+      phonemeProcess: '/r/ (Gliding)',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 6,
+      maxAge: 7,
+    ),
+
+    ScreeningWordModel(
+      id: 'volcano_age67_initial',
+      audioId: 'volcano',
+      displayWord: 'VOLCANO',
+      phonemeProcess: '/v/',
+      position: ScreeningWordPosition.initial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'seven_age67_medial',
+      audioId: 'seven',
+      displayWord: 'SEVEN',
+      phonemeProcess: '/v/',
+      position: ScreeningWordPosition.medial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'glove_age67_final',
+      audioId: 'glove',
+      displayWord: 'GLOVE',
+      phonemeProcess: '/v/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 6,
+      maxAge: 7,
+    ),
+
+    ScreeningWordModel(
+      id: 'chair_age67_initial',
+      audioId: 'chair',
+      displayWord: 'CHAIR',
+      phonemeProcess: '/ch, j/',
+      position: ScreeningWordPosition.initial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'jeep_age67_initial',
+      audioId: 'jeep',
+      displayWord: 'JEEP',
+      phonemeProcess: '/ch, j/',
+      position: ScreeningWordPosition.initial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'kitchen_age67_medial',
+      audioId: 'kitchen',
+      displayWord: 'KITCHEN',
+      phonemeProcess: '/ch, j/',
+      position: ScreeningWordPosition.medial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'orange_age67_medial',
+      audioId: 'orange',
+      displayWord: 'ORANGE',
+      phonemeProcess: '/ch, j/',
+      position: ScreeningWordPosition.medial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'watch_age67_final',
+      audioId: 'watch',
+      displayWord: 'WATCH',
+      phonemeProcess: '/ch, j/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'bridge_age67_final',
+      audioId: 'bridge',
+      displayWord: 'BRIDGE',
+      phonemeProcess: '/ch, j/',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 6,
+      maxAge: 7,
+    ),
+
+    ScreeningWordModel(
+      id: 'frog_age67_initial',
+      audioId: 'frog',
+      displayWord: 'FROG',
+      phonemeProcess: 'R-Clusters',
+      position: ScreeningWordPosition.initial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+    ScreeningWordModel(
+      id: 'truck_age67_initial',
+      audioId: 'truck',
+      displayWord: 'TRUCK',
+      phonemeProcess: 'R-Clusters',
+      position: ScreeningWordPosition.initial,
+      minAge: 6,
+      maxAge: 7,
+    ),
+  ];
+
+  // AGE 8
+  static const List<ScreeningWordModel> age8Words = [
+    ScreeningWordModel(
+      id: 'thumb_age8_initial',
+      audioId: 'thumb',
+      displayWord: 'THUMB',
+      phonemeProcess: '/th/ (Voiceless)',
+      position: ScreeningWordPosition.initial,
+      minAge: 8,
+      maxAge: 8,
+    ),
+    ScreeningWordModel(
+      id: 'toothbrush_age8_medial',
+      audioId: 'toothbrush',
+      displayWord: 'TOOTHBRUSH',
+      phonemeProcess: '/th/ (Voiceless)',
+      position: ScreeningWordPosition.medial,
+      minAge: 8,
+      maxAge: 8,
+    ),
+    ScreeningWordModel(
+      id: 'mouth_age8_final',
+      audioId: 'mouth',
+      displayWord: 'MOUTH',
+      phonemeProcess: '/th/ (Voiceless)',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 8,
+      maxAge: 8,
+    ),
+
+    ScreeningWordModel(
+      id: 'they_age8_initial',
+      audioId: 'they',
+      displayWord: 'THEY',
+      phonemeProcess: '/th/ (Voiced)',
+      position: ScreeningWordPosition.initial,
+      minAge: 8,
+      maxAge: 8,
+    ),
+    ScreeningWordModel(
+      id: 'this_age8_initial',
+      audioId: 'this',
+      displayWord: 'THIS',
+      phonemeProcess: '/th/ (Voiced)',
+      position: ScreeningWordPosition.initial,
+      minAge: 8,
+      maxAge: 8,
+    ),
+    ScreeningWordModel(
+      id: 'feather_age8_medial',
+      audioId: 'feather',
+      displayWord: 'FEATHER',
+      phonemeProcess: '/th/ (Voiced)',
+      position: ScreeningWordPosition.medial,
+      minAge: 8,
+      maxAge: 8,
+    ),
+    ScreeningWordModel(
+      id: 'smooth_age8_final',
+      audioId: 'smooth',
+      displayWord: 'SMOOTH',
+      phonemeProcess: '/th/ (Voiced)',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 8,
+      maxAge: 8,
+    ),
+
+    ScreeningWordModel(
+      id: 'treasure_age8_medial',
+      audioId: 'treasure',
+      displayWord: 'TREASURE',
+      phonemeProcess: '/zh/',
+      position: ScreeningWordPosition.medial,
+      minAge: 8,
+      maxAge: 8,
+    ),
+
+    ScreeningWordModel(
+      id: 'helicopter_age8_initial',
+      audioId: 'helicopter',
+      displayWord: 'HELICOPTER',
+      phonemeProcess: 'Complexity',
+      position: ScreeningWordPosition.initial,
+      minAge: 8,
+      maxAge: 8,
+    ),
+    ScreeningWordModel(
+      id: 'vegetable_age8_medial',
+      audioId: 'vegetable',
+      displayWord: 'VEGETABLE',
+      phonemeProcess: 'Complexity',
+      position: ScreeningWordPosition.medial,
+      minAge: 8,
+      maxAge: 8,
+    ),
+    ScreeningWordModel(
+      id: 'spaghetti_age8_final',
+      audioId: 'spaghetti',
+      displayWord: 'SPAGHETTI',
+      phonemeProcess: 'Complexity',
+      position: ScreeningWordPosition.finalPosition,
+      minAge: 8,
+      maxAge: 8,
+    ),
+  ];
+}
