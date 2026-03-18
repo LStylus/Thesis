@@ -46,6 +46,29 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     super.dispose();
   }
 
+  bool _isSupportedAge(int age) {
+    return age >= 4 && age <= 8;
+  }
+
+  Future<void> _showAgeWarning(int age) async {
+    await showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Age not supported'),
+        content: Text(
+          'The child is $age years old.\n\n'
+          'Voice Voyage screening is currently available only for ages 4 to 8.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
   InputDecoration _inputDecoration(String hintText, {Widget? suffixIcon}) {
     return InputDecoration(
       hintText: hintText,
@@ -131,6 +154,13 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
   Future<void> _complete() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final childAge = ProfileModel.calculateAge(_selectedDate!);
+
+    if (!_isSupportedAge(childAge)) {
+      await _showAgeWarning(childAge);
+      return;
+    }
+
     widget.controller.saveChildInfo(
       childName: _childNameController.text,
       childBirthDate: _selectedDate,
@@ -140,8 +170,6 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     if (!mounted) return;
 
     if (ok) {
-      final childAge = ProfileModel.calculateAge(_selectedDate!);
-
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => ScreeningPage(childAge: childAge)),
@@ -202,6 +230,13 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
                 child: AnimatedBuilder(
                   animation: widget.controller,
                   builder: (context, _) {
+                    final agePreview = _selectedDate != null
+                        ? ProfileModel.calculateAge(_selectedDate!)
+                        : null;
+
+                    final showAgeWarningInline =
+                        agePreview != null && !_isSupportedAge(agePreview);
+
                     return Column(
                       children: [
                         _buildHeader(
@@ -249,10 +284,37 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
                               if (_selectedDate == null) {
                                 return "Please select the child's birth date";
                               }
+
+                              final age = ProfileModel.calculateAge(
+                                _selectedDate!,
+                              );
+
+                              if (age < 4 || age > 8) {
+                                return 'Only ages 4 to 8 are allowed.';
+                              }
+
                               return null;
                             },
                           ),
                         ),
+
+                        if (showAgeWarningInline) ...[
+                          const SizedBox(height: 8),
+                          SizedBox(
+                            width: 390,
+                            child: Text(
+                              'Warning: age $agePreview is outside the supported range. '
+                              'Only children aged 4 to 8 can proceed.',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: 16),
 
                         SizedBox(
