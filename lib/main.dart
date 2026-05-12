@@ -1,6 +1,10 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
+import 'controllers/auth_controller.dart';
+import 'controllers/home_controller.dart';
+import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
 import 'views/auth/auth_gate.dart';
 
@@ -9,7 +13,15 @@ Future<void> main() async {
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  runApp(const VoiceVoyageApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthController()),
+        Provider(create: (_) => HomeController()),
+      ],
+      child: const VoiceVoyageApp(),
+    ),
+  );
 }
 
 class VoiceVoyageApp extends StatelessWidget {
@@ -20,10 +32,7 @@ class VoiceVoyageApp extends StatelessWidget {
     return MaterialApp(
       title: 'Voice Voyage',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        scaffoldBackgroundColor: const Color(0xFFF3F3F3),
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF13B5EA)),
-      ),
+      theme: AppTheme.lightTheme,
       home: const AuthGate(),
     );
   }

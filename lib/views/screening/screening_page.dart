@@ -1,67 +1,50 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../controllers/screening_controller.dart';
-import '../auth/auth_gate.dart';
+import '../../core/constants/app_colors.dart';
+import '../../widgets/round_action_button.dart';
 import 'screening_recordings_test_page.dart';
 
-class ScreeningPage extends StatefulWidget {
+class ScreeningPage extends StatelessWidget {
   final int childAge;
 
   const ScreeningPage({super.key, required this.childAge});
 
   @override
-  State<ScreeningPage> createState() => _ScreeningPageState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => ScreeningController(childAge: childAge),
+      child: const _ScreeningView(),
+    );
+  }
 }
 
-class _ScreeningPageState extends State<ScreeningPage> {
-  late final ScreeningController _controller;
+class _ScreeningView extends StatefulWidget {
+  const _ScreeningView();
 
-  static const Color _primaryBlue = Color(0xFF12B5EA);
-  static const Color _textGray = Color(0xFF8D8D8D);
-  static const Color _bgColor = Color(0xFFF3F3F3);
+  @override
+  State<_ScreeningView> createState() => _ScreeningViewState();
+}
+
+class _ScreeningViewState extends State<_ScreeningView> {
   static const Color _circleGray = Color(0xFFE2E2E2);
   static const Color _iconGray = Color(0xFF7F7F7F);
   static const Color _disabledGray = Color(0xFFBDBDBD);
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = ScreeningController(childAge: widget.childAge);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  Future<void> _exitScreening() async {
-    await _controller.cancelAndClearAll();
+  Future<void> _exitScreening(ScreeningController controller) async {
+    await controller.cancelAndClearAll();
     if (!mounted) return;
     Navigator.pop(context);
   }
 
-  Future<bool> _handleSystemBack() async {
-    await _exitScreening();
+  Future<bool> _handleSystemBack(ScreeningController controller) async {
+    await _exitScreening(controller);
     return false;
   }
 
-  // Future<void> _handleNext() async {
-  //   final finished = await _controller.goNext();
-
-  //   if (!mounted) return;
-
-  //   if (finished) {
-  //     Navigator.of(context).pushAndRemoveUntil(
-  //       MaterialPageRoute(builder: (_) => const AuthGate()),
-  //       (route) => false,
-  //     );
-  //   }
-  // }
-
-  //will delete
-  Future<void> _handleNext() async {
-    final finished = await _controller.goNext();
+  Future<void> _handleNext(ScreeningController controller) async {
+    final finished = await controller.goNext();
 
     if (!mounted) return;
 
@@ -69,33 +52,15 @@ class _ScreeningPageState extends State<ScreeningPage> {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => ScreeningRecordingsTestPage(
-            words: _controller.words,
-            recordingsByWordId: _controller.recordingsByWordId,
+            words: controller.words,
+            recordingsByWordId: controller.recordingsByWordId,
           ),
         ),
       );
     }
   }
 
-  Widget _roundActionButton({
-    required IconData icon,
-    required VoidCallback? onTap,
-    required Color fillColor,
-    required Color iconColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(32),
-      child: Container(
-        width: 56,
-        height: 56,
-        decoration: BoxDecoration(color: fillColor, shape: BoxShape.circle),
-        child: Icon(icon, color: iconColor, size: 28),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
+  Widget _buildHeader(ScreeningController controller) {
     return SizedBox(
       width: 390,
       child: Stack(
@@ -104,7 +69,7 @@ class _ScreeningPageState extends State<ScreeningPage> {
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
-              onPressed: _exitScreening,
+              onPressed: () => _exitScreening(controller),
               icon: const Icon(Icons.close_rounded),
               color: const Color(0xFFC3C3C3),
             ),
@@ -115,7 +80,7 @@ class _ScreeningPageState extends State<ScreeningPage> {
               'Speech Sound Screening',
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: _primaryBlue,
+                color: AppColors.primary,
                 fontSize: 22,
                 fontWeight: FontWeight.w800,
               ),
@@ -128,15 +93,13 @@ class _ScreeningPageState extends State<ScreeningPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _handleSystemBack,
-      child: Scaffold(
-        backgroundColor: _bgColor,
-        body: SafeArea(
-          child: AnimatedBuilder(
-            animation: _controller,
-            builder: (context, _) {
-              return Center(
+    return Consumer<ScreeningController>(
+      builder: (context, controller, _) {
+        return WillPopScope(
+          onWillPop: () => _handleSystemBack(controller),
+          child: Scaffold(
+            body: SafeArea(
+              child: Center(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -146,21 +109,21 @@ class _ScreeningPageState extends State<ScreeningPage> {
                     constraints: const BoxConstraints(maxWidth: 500),
                     child: Column(
                       children: [
-                        _buildHeader(),
+                        _buildHeader(controller),
                         const SizedBox(height: 14),
                         Text(
-                          '${_controller.currentStep} of ${_controller.totalSteps}',
+                          '${controller.currentStep} of ${controller.totalSteps}',
                           style: const TextStyle(
-                            color: _textGray,
+                            color: AppColors.textGray,
                             fontSize: 12,
                           ),
                         ),
                         const SizedBox(height: 34),
                         Text(
-                          _controller.currentWord.displayWord,
+                          controller.currentWord.displayWord,
                           textAlign: TextAlign.center,
                           style: const TextStyle(
-                            color: _primaryBlue,
+                            color: AppColors.primary,
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 0.4,
@@ -170,65 +133,65 @@ class _ScreeningPageState extends State<ScreeningPage> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
-                            _controller.isRecording
+                            controller.isRecording
                                 ? 'Recording... please wait, it will stop automatically.'
-                                : _controller.hasRecording
+                                : controller.hasRecording
                                 ? 'Would you like to record again or continue?'
-                                : _controller.isPromptPlaying
+                                : controller.isPromptPlaying
                                 ? 'Prompt is playing... please wait before recording.'
                                 : 'Tap the speaker to hear the word, then tap the microphone to record.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
-                              color: _textGray,
+                              color: AppColors.textGray,
                               fontSize: 11.5,
                             ),
                           ),
                         ),
-                        if (_controller.errorMessage != null) ...[
+                        if (controller.errorMessage != null) ...[
                           const SizedBox(height: 10),
                           SizedBox(
                             width: 390,
                             child: Text(
-                              _controller.errorMessage!,
+                              controller.errorMessage!,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                color: Colors.red,
+                                color: AppColors.error,
                                 fontSize: 12,
                               ),
                             ),
                           ),
                         ],
                         const SizedBox(height: 18),
-                        if (!_controller.hasRecording)
+                        if (!controller.hasRecording)
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _roundActionButton(
+                              RoundActionButton(
                                 icon: Icons.volume_up_rounded,
-                                onTap: _controller.canPlayPrompt
-                                    ? _controller.playPromptAudio
+                                onTap: controller.canPlayPrompt
+                                    ? controller.playPromptAudio
                                     : null,
-                                fillColor: _controller.isPromptPlaying
-                                    ? _primaryBlue.withValues(alpha: 0.18)
+                                fillColor: controller.isPromptPlaying
+                                    ? AppColors.primary.withValues(alpha: 0.18)
                                     : _circleGray,
-                                iconColor: _controller.isPromptPlaying
-                                    ? _primaryBlue
-                                    : (_controller.canPlayPrompt
+                                iconColor: controller.isPromptPlaying
+                                    ? AppColors.primary
+                                    : (controller.canPlayPrompt
                                           ? _iconGray
                                           : _disabledGray),
                               ),
                               const SizedBox(width: 22),
-                              _roundActionButton(
+                              RoundActionButton(
                                 icon: Icons.mic_rounded,
-                                onTap: _controller.canRecord
-                                    ? _controller.startTimedRecording
+                                onTap: controller.canRecord
+                                    ? controller.startTimedRecording
                                     : null,
-                                fillColor: _controller.isRecording
+                                fillColor: controller.isRecording
                                     ? Colors.red.withValues(alpha: 0.16)
                                     : _circleGray,
-                                iconColor: _controller.isRecording
+                                iconColor: controller.isRecording
                                     ? Colors.red
-                                    : (_controller.canRecord
+                                    : (controller.canRecord
                                           ? _iconGray
                                           : _disabledGray),
                               ),
@@ -238,24 +201,24 @@ class _ScreeningPageState extends State<ScreeningPage> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              _roundActionButton(
+                              RoundActionButton(
                                 icon: Icons.refresh_rounded,
-                                onTap: _controller.isRecording
+                                onTap: controller.isRecording
                                     ? null
-                                    : _controller.repeatCurrentWord,
+                                    : controller.repeatCurrentWord,
                                 fillColor: _circleGray,
-                                iconColor: _controller.isRecording
+                                iconColor: controller.isRecording
                                     ? _disabledGray
                                     : _iconGray,
                               ),
                               const SizedBox(width: 22),
-                              _roundActionButton(
+                              RoundActionButton(
                                 icon: Icons.arrow_forward_rounded,
-                                onTap: _controller.isRecording
+                                onTap: controller.isRecording
                                     ? null
-                                    : _handleNext,
+                                    : () => _handleNext(controller),
                                 fillColor: _circleGray,
-                                iconColor: _controller.isRecording
+                                iconColor: controller.isRecording
                                     ? _disabledGray
                                     : _iconGray,
                               ),
@@ -265,11 +228,11 @@ class _ScreeningPageState extends State<ScreeningPage> {
                     ),
                   ),
                 ),
-              );
-            },
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

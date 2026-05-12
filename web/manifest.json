@@ -1,6 +1,6 @@
 {
-    "name": "sample_code",
-    "short_name": "sample_code",
+    "name": "Voice Voyage",
+    "short_name": "Voice Voyage",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

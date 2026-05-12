@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/constants/app_colors.dart';
 import '../../models/screening_word_model.dart';
 import '../auth/auth_gate.dart';
 
@@ -27,10 +28,6 @@ class _ScreeningRecordingsTestPageState
 
   String? _playingWordId;
   String? _errorMessage;
-
-  static const Color _primaryBlue = Color(0xFF12B5EA);
-  static const Color _bgColor = Color(0xFFF3F3F3);
-  static const Color _textGray = Color(0xFF8D8D8D);
 
   @override
   void initState() {
@@ -105,10 +102,10 @@ class _ScreeningRecordingsTestPageState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            backgroundColor: _primaryBlue.withOpacity(0.12),
+            backgroundColor: AppColors.primary.withValues(alpha: 0.12),
             child: Icon(
               isPlaying ? Icons.graphic_eq_rounded : Icons.mic_rounded,
-              color: _primaryBlue,
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(width: 12),
@@ -121,13 +118,16 @@ class _ScreeningRecordingsTestPageState
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,
-                    color: _primaryBlue,
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${word.position.label} • ${word.phonemeProcess}',
-                  style: const TextStyle(fontSize: 12, color: _textGray),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textGray,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
@@ -136,7 +136,7 @@ class _ScreeningRecordingsTestPageState
                       : 'No recording found',
                   style: TextStyle(
                     fontSize: 11.5,
-                    color: hasFile ? Colors.green : Colors.red,
+                    color: hasFile ? Colors.green : AppColors.error,
                   ),
                 ),
               ],
@@ -146,16 +146,20 @@ class _ScreeningRecordingsTestPageState
           ElevatedButton.icon(
             onPressed: hasFile ? () => _togglePlay(word.id, path!) : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _primaryBlue,
-              foregroundColor: Colors.white,
+              minimumSize: const Size(80, 36),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(22),
               ),
             ),
             icon: Icon(
               isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded,
+              size: 18,
             ),
-            label: Text(isPlaying ? 'Stop' : 'Play'),
+            label: Text(
+              isPlaying ? 'Stop' : 'Play',
+              style: const TextStyle(fontSize: 13),
+            ),
           ),
         ],
       ),
@@ -184,11 +188,8 @@ class _ScreeningRecordingsTestPageState
     final recordedCount = widget.recordingsByWordId.length;
 
     return Scaffold(
-      backgroundColor: _bgColor,
       appBar: AppBar(
         title: const Text('Recording Test'),
-        backgroundColor: _primaryBlue,
-        foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: Center(
@@ -204,13 +205,16 @@ class _ScreeningRecordingsTestPageState
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      color: _primaryBlue,
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Recorded files found: $recordedCount / ${widget.words.length}',
-                    style: const TextStyle(fontSize: 13, color: _textGray),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textGray,
+                    ),
                   ),
                   const SizedBox(height: 16),
 
@@ -220,13 +224,13 @@ class _ScreeningRecordingsTestPageState
                       padding: const EdgeInsets.all(12),
                       margin: const EdgeInsets.only(bottom: 14),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.08),
+                        color: AppColors.error.withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         _errorMessage!,
                         style: const TextStyle(
-                          color: Colors.red,
+                          color: AppColors.error,
                           fontSize: 12.5,
                         ),
                       ),
@@ -241,20 +245,7 @@ class _ScreeningRecordingsTestPageState
                     height: 48,
                     child: ElevatedButton(
                       onPressed: _finishTesting,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _primaryBlue,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                      ),
-                      child: const Text(
-                        'Done Testing',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: const Text('Done Testing'),
                     ),
                   ),
                 ],

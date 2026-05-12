@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../core/constants/app_colors.dart';
 import '../../models/profile_model.dart';
+import '../../widgets/auth_header.dart';
+import '../../widgets/custom_text_field.dart';
+import '../../widgets/primary_button.dart';
 import '../screening/screening_page.dart';
 
 class ChildInfoPage extends StatefulWidget {
-  final AuthController controller;
-
-  const ChildInfoPage({super.key, required this.controller});
+  const ChildInfoPage({super.key});
 
   @override
   State<ChildInfoPage> createState() => _ChildInfoPageState();
@@ -21,16 +24,12 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
 
   DateTime? _selectedDate;
 
-  static const Color _primaryBlue = Color(0xFF12B5EA);
-  static const Color _textGray = Color(0xFF8D8D8D);
-  static const Color _borderGray = Color(0xFFD9D9D9);
-  static const Color _bgColor = Color(0xFFF3F3F3);
-
   @override
   void initState() {
     super.initState();
-    _childNameController.text = widget.controller.draft.childName;
-    _selectedDate = widget.controller.draft.childBirthDate;
+    final authController = context.read<AuthController>();
+    _childNameController.text = authController.draft.childName;
+    _selectedDate = authController.draft.childBirthDate;
 
     if (_selectedDate != null) {
       _birthDateController.text = DateFormat(
@@ -69,71 +68,6 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     );
   }
 
-  InputDecoration _inputDecoration(String hintText, {Widget? suffixIcon}) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(color: Color(0xFFA6A6A6), fontSize: 14),
-      filled: true,
-      fillColor: Colors.white,
-      suffixIcon: suffixIcon,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _borderGray),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _borderGray),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _primaryBlue, width: 1.3),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red, width: 1.3),
-      ),
-    );
-  }
-
-  Widget _buildHeader({
-    required String title,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: 390,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: IconButton(
-              onPressed: onPressed,
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              color: const Color(0xFFC3C3C3),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 48),
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: _primaryBlue,
-                fontSize: 28,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _pickDate() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -151,7 +85,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     }
   }
 
-  Future<void> _complete() async {
+  Future<void> _complete(AuthController authController) async {
     if (!_formKey.currentState!.validate()) return;
 
     final childAge = ProfileModel.calculateAge(_selectedDate!);
@@ -161,12 +95,12 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
       return;
     }
 
-    widget.controller.saveChildInfo(
+    authController.saveChildInfo(
       childName: _childNameController.text,
       childBirthDate: _selectedDate,
     );
 
-    final ok = await widget.controller.completeSignup();
+    final ok = await authController.completeSignup();
     if (!mounted) return;
 
     if (ok) {
@@ -177,48 +111,9 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     }
   }
 
-  Widget _buildPrimaryButton({
-    required String text,
-    required VoidCallback? onPressed,
-    required bool isLoading,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _primaryBlue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -227,9 +122,8 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
               constraints: const BoxConstraints(maxWidth: 500),
               child: Form(
                 key: _formKey,
-                child: AnimatedBuilder(
-                  animation: widget.controller,
-                  builder: (context, _) {
+                child: Consumer<AuthController>(
+                  builder: (context, authController, _) {
                     final agePreview = _selectedDate != null
                         ? ProfileModel.calculateAge(_selectedDate!)
                         : null;
@@ -239,24 +133,27 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
 
                     return Column(
                       children: [
-                        _buildHeader(
+                        AuthHeader(
                           title: 'Almost there!',
-                          onPressed: () => Navigator.pop(context),
+                          onBack: () => Navigator.pop(context),
                         ),
                         const SizedBox(height: 6),
                         const Text(
                           "personalize the child's learning experience",
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: _textGray, fontSize: 13),
+                          style: TextStyle(
+                            color: AppColors.textGray,
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 28),
 
                         SizedBox(
                           width: 390,
-                          child: TextFormField(
+                          child: CustomTextField(
                             controller: _childNameController,
-                            onChanged: (_) => widget.controller.clearError(),
-                            decoration: _inputDecoration("Child's Name"),
+                            hintText: "Child's Name",
+                            onChanged: (_) => authController.clearError(),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return "Please enter the child's name";
@@ -273,8 +170,8 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
                             controller: _birthDateController,
                             readOnly: true,
                             onTap: _pickDate,
-                            decoration: _inputDecoration(
-                              "Child's Birth Date",
+                            decoration: InputDecoration(
+                              hintText: "Child's Birth Date",
                               suffixIcon: IconButton(
                                 onPressed: _pickDate,
                                 icon: const Icon(Icons.calendar_today_outlined),
@@ -319,24 +216,24 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
 
                         SizedBox(
                           width: 390,
-                          child: _buildPrimaryButton(
+                          child: PrimaryButton(
                             text: 'Complete',
-                            onPressed: widget.controller.isLoading
+                            onPressed: authController.isLoading
                                 ? null
-                                : _complete,
-                            isLoading: widget.controller.isLoading,
+                                : () => _complete(authController),
+                            isLoading: authController.isLoading,
                           ),
                         ),
 
-                        if (widget.controller.errorMessage != null) ...[
+                        if (authController.errorMessage != null) ...[
                           const SizedBox(height: 12),
                           SizedBox(
                             width: 390,
                             child: Text(
-                              widget.controller.errorMessage!,
+                              authController.errorMessage!,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                color: Colors.red,
+                                color: AppColors.error,
                                 fontSize: 12,
                               ),
                             ),

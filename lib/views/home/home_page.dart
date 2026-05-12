@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 
 import '../../controllers/home_controller.dart';
+import '../../core/constants/app_colors.dart';
 import '../../models/profile_model.dart';
 
 class HomePage extends StatefulWidget {
@@ -12,8 +14,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final HomeController _controller = HomeController();
-
   String _formatBirthDate(DateTime birthDate) {
     return DateFormat('MMMM dd, yyyy').format(birthDate);
   }
@@ -35,23 +35,22 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final homeController = context.read<HomeController>();
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF3F3F3),
       appBar: AppBar(
-        title: const Text('Voice Voyage', style: TextStyle(fontSize: 18)),
-        backgroundColor: const Color(0xFF13B5EA),
-        foregroundColor: Colors.white,
+        title: const Text('Voice Voyage'),
         actions: [
           IconButton(
             onPressed: () async {
-              await _controller.signOut();
+              await homeController.signOut();
             },
             icon: const Icon(Icons.logout),
           ),
         ],
       ),
       body: StreamBuilder<ProfileModel?>(
-        stream: _controller.currentUserProfileStream(),
+        stream: homeController.currentUserProfileStream(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -76,7 +75,7 @@ class _HomePageState extends State<HomePage> {
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF13B5EA),
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 6),
@@ -123,7 +122,7 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(height: 10),
                     const Text(
                       'Progress fields can be connected later once your progress module is ready.',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
+                      style: TextStyle(color: AppColors.textGray, fontSize: 12),
                     ),
                   ],
                 ),

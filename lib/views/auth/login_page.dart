@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../core/constants/app_colors.dart';
+import '../../widgets/custom_text_field.dart';
+import '../../widgets/primary_button.dart';
 import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -11,106 +15,29 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final AuthController _controller = AuthController();
-
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  static const Color _primaryBlue = Color(0xFF12B5EA);
-  static const Color _textGray = Color(0xFF8D8D8D);
-  static const Color _borderGray = Color(0xFFD9D9D9);
-  static const Color _bgColor = Color(0xFFF3F3F3);
-
   @override
   void dispose() {
-    _controller.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  InputDecoration _inputDecoration(String hintText) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(color: Color(0xFFA6A6A6), fontSize: 14),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _borderGray),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _borderGray),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _primaryBlue, width: 1.3),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red, width: 1.3),
-      ),
-    );
-  }
-
-  Future<void> _login() async {
+  Future<void> _login(AuthController authController) async {
     if (!_formKey.currentState!.validate()) return;
 
-    await _controller.login(
+    await authController.login(
       email: _emailController.text,
       password: _passwordController.text,
-    );
-  }
-
-  Widget _buildPrimaryButton({
-    required String text,
-    required VoidCallback? onPressed,
-    required bool isLoading,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _primaryBlue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _bgColor,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -119,9 +46,8 @@ class _LoginPageState extends State<LoginPage> {
               constraints: const BoxConstraints(maxWidth: 500),
               child: Form(
                 key: _formKey,
-                child: AnimatedBuilder(
-                  animation: _controller,
-                  builder: (context, _) {
+                child: Consumer<AuthController>(
+                  builder: (context, authController, _) {
                     return Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -130,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
                           'Login',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: _primaryBlue,
+                            color: AppColors.primary,
                             fontSize: 28,
                             fontWeight: FontWeight.w900,
                           ),
@@ -139,16 +65,19 @@ class _LoginPageState extends State<LoginPage> {
                         const Text(
                           'to continue your journey',
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: _textGray, fontSize: 13),
+                          style: TextStyle(
+                            color: AppColors.textGray,
+                            fontSize: 13,
+                          ),
                         ),
                         const SizedBox(height: 28),
 
                         SizedBox(
                           width: 390,
-                          child: TextFormField(
+                          child: CustomTextField(
                             controller: _emailController,
-                            onChanged: (_) => _controller.clearError(),
-                            decoration: _inputDecoration('Email'),
+                            hintText: 'Email',
+                            onChanged: (_) => authController.clearError(),
                             validator: (value) {
                               if (value == null || value.trim().isEmpty) {
                                 return 'Please enter your email';
@@ -164,11 +93,11 @@ class _LoginPageState extends State<LoginPage> {
 
                         SizedBox(
                           width: 390,
-                          child: TextFormField(
+                          child: CustomTextField(
                             controller: _passwordController,
-                            onChanged: (_) => _controller.clearError(),
+                            hintText: 'Password',
                             obscureText: true,
-                            decoration: _inputDecoration('Password'),
+                            onChanged: (_) => authController.clearError(),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your password';
@@ -181,22 +110,22 @@ class _LoginPageState extends State<LoginPage> {
 
                         SizedBox(
                           width: 390,
-                          child: _buildPrimaryButton(
+                          child: PrimaryButton(
                             text: 'Login',
-                            onPressed: _controller.isLoading ? null : _login,
-                            isLoading: _controller.isLoading,
+                            onPressed: () => _login(authController),
+                            isLoading: authController.isLoading,
                           ),
                         ),
 
-                        if (_controller.errorMessage != null) ...[
+                        if (authController.errorMessage != null) ...[
                           const SizedBox(height: 12),
                           SizedBox(
                             width: 390,
                             child: Text(
-                              _controller.errorMessage!,
+                              authController.errorMessage!,
                               textAlign: TextAlign.center,
                               style: const TextStyle(
-                                color: Colors.red,
+                                color: AppColors.error,
                                 fontSize: 12,
                               ),
                             ),
@@ -208,7 +137,7 @@ class _LoginPageState extends State<LoginPage> {
                           textAlign: TextAlign.center,
                           text: TextSpan(
                             style: const TextStyle(
-                              color: _textGray,
+                              color: AppColors.textGray,
                               fontSize: 11.5,
                             ),
                             children: [
@@ -227,7 +156,7 @@ class _LoginPageState extends State<LoginPage> {
                                   child: const Text(
                                     'Sign up here',
                                     style: TextStyle(
-                                      color: _textGray,
+                                      color: AppColors.textGray,
                                       fontSize: 11.5,
                                       fontWeight: FontWeight.w600,
                                       decoration: TextDecoration.underline,
@@ -243,7 +172,7 @@ class _LoginPageState extends State<LoginPage> {
                           'Terms & Privacy | Privacy Policy',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            color: _textGray,
+                            color: AppColors.textGray,
                             fontSize: 11.5,
                             decoration: TextDecoration.underline,
                           ),

@@ -1,5 +1,5 @@
 name: thesis
-description: "A new Flutter project."
+description: "Voice Voyage: Speech Sound Screening App"
 
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
@@ -23,6 +23,7 @@ dependencies:
     path_provider: ^2.1.5
     flutter_recorder: ^1.1.2
     permission_handler: ^11.3.1
+    provider: ^6.1.5+1
 
 
 dev_dependencies:

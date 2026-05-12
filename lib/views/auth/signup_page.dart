@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
+import '../../core/constants/app_colors.dart';
+import '../../widgets/custom_text_field.dart';
+import '../../widgets/primary_button.dart';
 import 'parent_info_page.dart';
 
 class SignupPage extends StatefulWidget {
@@ -11,57 +15,19 @@ class SignupPage extends StatefulWidget {
 }
 
 class _SignupPageState extends State<SignupPage> {
-  final AuthController _controller = AuthController();
-
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  static const Color _primaryBlue = Color(0xFF12B5EA);
-  static const Color _textGray = Color(0xFF8D8D8D);
-  static const Color _borderGray = Color(0xFFD9D9D9);
-  static const Color _bgColor = Color(0xFFF3F3F3);
-
   @override
   void dispose() {
-    _controller.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  InputDecoration _inputDecoration(String hintText) {
-    return InputDecoration(
-      hintText: hintText,
-      hintStyle: const TextStyle(color: Color(0xFFA6A6A6), fontSize: 14),
-      filled: true,
-      fillColor: Colors.white,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _borderGray),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _borderGray),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: _primaryBlue, width: 1.3),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Colors.red, width: 1.3),
-      ),
-    );
-  }
-
-  Future<void> _goToLogin() async {
-    await _controller.cancelPendingSignup();
+  Future<void> _goToLogin(AuthController authController) async {
+    await authController.cancelPendingSignup();
     _emailController.clear();
     _passwordController.clear();
 
@@ -70,16 +36,17 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<bool> _handleSystemBack() async {
-    await _controller.cancelPendingSignup();
+    final authController = context.read<AuthController>();
+    await authController.cancelPendingSignup();
     _emailController.clear();
     _passwordController.clear();
     return true;
   }
 
-  Future<void> _goNext() async {
+  Future<void> _goNext(AuthController authController) async {
     if (!_formKey.currentState!.validate()) return;
 
-    final ok = await _controller.registerAccountStep1(
+    final ok = await authController.registerAccountStep1(
       email: _emailController.text,
       password: _passwordController.text,
     );
@@ -90,7 +57,7 @@ class _SignupPageState extends State<SignupPage> {
       final shouldReset = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
-          builder: (_) => ParentInfoPage(controller: _controller),
+          builder: (_) => const ParentInfoPage(),
         ),
       );
 
@@ -103,62 +70,23 @@ class _SignupPageState extends State<SignupPage> {
     }
   }
 
-  Widget _buildPrimaryButton({
-    required String text,
-    required VoidCallback? onPressed,
-    required bool isLoading,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 48,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: _primaryBlue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-        child: isLoading
-            ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Colors.white,
-                ),
-              )
-            : Text(
-                text,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: _handleSystemBack,
-      child: Scaffold(
-        backgroundColor: _bgColor,
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: Form(
-                  key: _formKey,
-                  child: AnimatedBuilder(
-                    animation: _controller,
-                    builder: (context, _) {
-                      return Column(
+    return Consumer<AuthController>(
+      builder: (context, authController, _) {
+        return WillPopScope(
+          onWillPop: _handleSystemBack,
+          child: Scaffold(
+            body: SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const SizedBox(height: 24),
@@ -166,7 +94,7 @@ class _SignupPageState extends State<SignupPage> {
                             'Create Your Account',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: _primaryBlue,
+                              color: AppColors.primary,
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
                             ),
@@ -175,16 +103,19 @@ class _SignupPageState extends State<SignupPage> {
                           const Text(
                             'to begin a journey in Voice Voyage',
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: _textGray, fontSize: 13),
+                            style: TextStyle(
+                              color: AppColors.textGray,
+                              fontSize: 13,
+                            ),
                           ),
                           const SizedBox(height: 28),
 
                           SizedBox(
                             width: 390,
-                            child: TextFormField(
+                            child: CustomTextField(
                               controller: _emailController,
-                              onChanged: (_) => _controller.clearError(),
-                              decoration: _inputDecoration('Email'),
+                              hintText: 'Email',
+                              onChanged: (_) => authController.clearError(),
                               validator: (value) {
                                 if (value == null || value.trim().isEmpty) {
                                   return 'Please enter your email';
@@ -200,11 +131,11 @@ class _SignupPageState extends State<SignupPage> {
 
                           SizedBox(
                             width: 390,
-                            child: TextFormField(
+                            child: CustomTextField(
                               controller: _passwordController,
-                              onChanged: (_) => _controller.clearError(),
+                              hintText: 'Password',
                               obscureText: true,
-                              decoration: _inputDecoration('Password'),
+                              onChanged: (_) => authController.clearError(),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter your password';
@@ -220,22 +151,24 @@ class _SignupPageState extends State<SignupPage> {
 
                           SizedBox(
                             width: 390,
-                            child: _buildPrimaryButton(
+                            child: PrimaryButton(
                               text: 'Sign up',
-                              onPressed: _controller.isLoading ? null : _goNext,
-                              isLoading: _controller.isLoading,
+                              onPressed: authController.isLoading
+                                  ? null
+                                  : () => _goNext(authController),
+                              isLoading: authController.isLoading,
                             ),
                           ),
 
-                          if (_controller.errorMessage != null) ...[
+                          if (authController.errorMessage != null) ...[
                             const SizedBox(height: 12),
                             SizedBox(
                               width: 390,
                               child: Text(
-                                _controller.errorMessage!,
+                                authController.errorMessage!,
                                 textAlign: TextAlign.center,
                                 style: const TextStyle(
-                                  color: Colors.red,
+                                  color: AppColors.error,
                                   fontSize: 12,
                                 ),
                               ),
@@ -247,7 +180,7 @@ class _SignupPageState extends State<SignupPage> {
                             textAlign: TextAlign.center,
                             text: TextSpan(
                               style: const TextStyle(
-                                color: _textGray,
+                                color: AppColors.textGray,
                                 fontSize: 11.5,
                               ),
                               children: [
@@ -257,11 +190,11 @@ class _SignupPageState extends State<SignupPage> {
                                 WidgetSpan(
                                   alignment: PlaceholderAlignment.middle,
                                   child: GestureDetector(
-                                    onTap: _goToLogin,
+                                    onTap: () => _goToLogin(authController),
                                     child: const Text(
                                       'Login here',
                                       style: TextStyle(
-                                        color: _textGray,
+                                        color: AppColors.textGray,
                                         fontSize: 11.5,
                                         fontWeight: FontWeight.w600,
                                         decoration: TextDecoration.underline,
@@ -277,22 +210,22 @@ class _SignupPageState extends State<SignupPage> {
                             'Terms & Privacy | Privacy Policy',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: _textGray,
+                              color: AppColors.textGray,
                               fontSize: 11.5,
                               decoration: TextDecoration.underline,
                             ),
                           ),
                           const SizedBox(height: 22),
                         ],
-                      );
-                    },
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
