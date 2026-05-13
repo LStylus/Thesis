@@ -7,7 +7,7 @@ import '../../controllers/auth_controller.dart';
 import '../../controllers/home_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/profile_model.dart';
-import '../screening/screening_page.dart';
+import '../../screens/gameplay/gameplay_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -33,12 +33,6 @@ class _HomePageState extends State<HomePage>
   void dispose() {
     _motionController.dispose();
     super.dispose();
-  }
-
-  Future<void> _openScreening(ProfileModel profile) async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => ScreeningPage(childAge: profile.age)),
-    );
   }
 
   @override
@@ -67,11 +61,7 @@ class _HomePageState extends State<HomePage>
             );
           }
 
-          return _OceanHomeView(
-            profile: profile,
-            animation: _motionController,
-            onStartScreening: () => _openScreening(profile),
-          );
+          return _OceanHomeView(profile: profile, animation: _motionController);
         },
       ),
     );
@@ -81,36 +71,45 @@ class _HomePageState extends State<HomePage>
 class _OceanHomeView extends StatefulWidget {
   final ProfileModel profile;
   final Animation<double> animation;
-  final VoidCallback onStartScreening;
 
-  const _OceanHomeView({
-    required this.profile,
-    required this.animation,
-    required this.onStartScreening,
-  });
+  const _OceanHomeView({required this.profile, required this.animation});
 
   @override
   State<_OceanHomeView> createState() => _OceanHomeViewState();
 }
 
 class _OceanHomeViewState extends State<_OceanHomeView> {
-  static const List<_QuestProgress> _quests = [
-    _QuestProgress(
-      title: 'Speech Quest 1 : Sounds',
-      levelsDone: 1,
-      totalLevels: 4,
-      score: 85,
-    ),
-    _QuestProgress(
-      title: 'Speech Quest 2 : Practice',
-      levelsDone: 0,
-      totalLevels: 4,
-      score: 0,
-    ),
-  ];
+  static const int _islandOneTotalLevels = 4;
 
   late final ScrollController _scrollController;
+  final Set<int> _completedIslandOneLevels = {};
+  final Map<int, int> _islandOneAccuracyByLevel = {};
   int _currentIsland = 0;
+  int _unlockedIslandOneLevels = 1;
+
+  List<_QuestProgress> get _quests {
+    final completedCount = _completedIslandOneLevels.length;
+    final averageScore = _islandOneAccuracyByLevel.isEmpty
+        ? 0
+        : (_islandOneAccuracyByLevel.values.reduce((a, b) => a + b) /
+                  _islandOneAccuracyByLevel.length)
+              .round();
+
+    return [
+      _QuestProgress(
+        title: 'Speech Quest 1 : Sounds',
+        levelsDone: completedCount,
+        totalLevels: _islandOneTotalLevels,
+        score: averageScore,
+      ),
+      const _QuestProgress(
+        title: 'Speech Quest 2 : Practice',
+        levelsDone: 0,
+        totalLevels: 4,
+        score: 0,
+      ),
+    ];
+  }
 
   @override
   void initState() {
@@ -154,6 +153,28 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
     );
   }
 
+  Future<void> _openGameplayLevel(int levelIndex) async {
+    final result = await Navigator.of(context).push<GameplayLevelResult>(
+      MaterialPageRoute(
+        builder: (_) => GameplayScreen(
+          childAge: widget.profile.age,
+          levelIndex: levelIndex,
+        ),
+      ),
+    );
+
+    if (!mounted || result == null || !result.correct) return;
+
+    setState(() {
+      _completedIslandOneLevels.add(result.levelIndex);
+      _islandOneAccuracyByLevel[result.levelIndex] = result.accuracy;
+      _unlockedIslandOneLevels = math.min(
+        _islandOneTotalLevels,
+        math.max(_unlockedIslandOneLevels, result.levelIndex + 2),
+      );
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
@@ -169,7 +190,9 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
             _ScrollableOceanMap(
               animation: widget.animation,
               scrollController: _scrollController,
-              onStartScreening: widget.onStartScreening,
+              unlockedIslandOneLevels: _unlockedIslandOneLevels,
+              completedIslandOneLevels: _completedIslandOneLevels,
+              onStartGameplay: _openGameplayLevel,
             ),
             Positioned(
               top: padding.top + 12,
@@ -222,12 +245,16 @@ class _OceanShell extends StatelessWidget {
 class _ScrollableOceanMap extends StatelessWidget {
   final Animation<double> animation;
   final ScrollController? scrollController;
-  final VoidCallback? onStartScreening;
+  final int unlockedIslandOneLevels;
+  final Set<int> completedIslandOneLevels;
+  final ValueChanged<int>? onStartGameplay;
 
   const _ScrollableOceanMap({
     required this.animation,
     this.scrollController,
-    this.onStartScreening,
+    this.unlockedIslandOneLevels = 1,
+    this.completedIslandOneLevels = const {},
+    this.onStartGameplay,
   });
 
   @override
@@ -245,6 +272,9 @@ class _ScrollableOceanMap extends StatelessWidget {
         double x(double value) => value * sx;
         double y(double value) => value * sy;
         double s(double value) => value * sx;
+        bool isIslandOneUnlocked(int levelIndex) {
+          return levelIndex < unlockedIslandOneLevels;
+        }
 
         return SizedBox(
           height: viewportHeight,
@@ -416,56 +446,75 @@ class _ScrollableOceanMap extends StatelessWidget {
                           left: x(250),
                           top: y(233),
                           size: s(65),
-                          active: true,
-                          onTap: onStartScreening,
+                          active: isIslandOneUnlocked(0),
+                          locked: !isIslandOneUnlocked(0),
+                          completed: completedIslandOneLevels.contains(0),
+                          onTap: isIslandOneUnlocked(0)
+                              ? () => onStartGameplay?.call(0)
+                              : null,
                         ),
                         _LessonSandNode(
                           animation: animation,
                           left: x(380),
                           top: y(163),
-                          size: s(56),
-                          locked: true,
+                          size: s(65),
+                          active: isIslandOneUnlocked(1),
+                          locked: !isIslandOneUnlocked(1),
+                          completed: completedIslandOneLevels.contains(1),
+                          onTap: isIslandOneUnlocked(1)
+                              ? () => onStartGameplay?.call(1)
+                              : null,
                         ),
                         _LessonSandNode(
                           animation: animation,
                           left: x(548),
                           top: y(200),
-                          size: s(56),
-                          locked: true,
+                          size: s(65),
+                          active: isIslandOneUnlocked(2),
+                          locked: !isIslandOneUnlocked(2),
+                          completed: completedIslandOneLevels.contains(2),
+                          onTap: isIslandOneUnlocked(2)
+                              ? () => onStartGameplay?.call(2)
+                              : null,
                         ),
                         _LessonSandNode(
                           animation: animation,
                           left: x(767),
                           top: y(215),
-                          size: s(56),
-                          locked: true,
+                          size: s(65),
+                          active: isIslandOneUnlocked(3),
+                          locked: !isIslandOneUnlocked(3),
+                          completed: completedIslandOneLevels.contains(3),
+                          onTap: isIslandOneUnlocked(3)
+                              ? () => onStartGameplay?.call(3)
+                              : null,
                         ),
                         _LessonSandNode(
                           animation: animation,
                           left: x(1323),
                           top: y(237),
-                          size: s(56),
+                          size: s(65),
                           locked: true,
                         ),
                         _LessonSandNode(
                           animation: animation,
                           left: x(1464),
                           top: y(180),
-                          size: s(56),
+                          size: s(65),
                           locked: true,
                         ),
                         _LessonSandNode(
                           animation: animation,
                           left: x(1618),
                           top: y(231),
-                          size: s(56),
+                          size: s(65),
                           locked: true,
                         ),
                         _LessonSandNode(
                           animation: animation,
                           left: x(1835),
                           top: y(241),
-                          size: s(56),
+                          size: s(65),
                           locked: true,
                         ),
                       ],
@@ -491,7 +540,9 @@ class _ProfileChip extends StatelessWidget {
       context: context,
       builder: (context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -548,9 +599,7 @@ class _ProfileChip extends StatelessWidget {
                         },
                         child: const Text(
                           'Sign Out',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                          ),
+                          style: TextStyle(fontWeight: FontWeight.w900),
                         ),
                       ),
                     ),
@@ -873,6 +922,7 @@ class _LessonSandNode extends StatelessWidget {
   final double size;
   final bool active;
   final bool locked;
+  final bool completed;
   final VoidCallback? onTap;
 
   const _LessonSandNode({
@@ -882,6 +932,7 @@ class _LessonSandNode extends StatelessWidget {
     required this.size,
     this.active = false,
     this.locked = false,
+    this.completed = false,
     this.onTap,
   });
 
@@ -915,6 +966,25 @@ class _LessonSandNode extends StatelessWidget {
                     height: size * 0.72,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.medium,
+                  ),
+                if (completed)
+                  Positioned(
+                    right: size * 0.08,
+                    bottom: size * 0.1,
+                    child: Container(
+                      width: size * 0.28,
+                      height: size * 0.28,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF18A85A),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Icon(
+                        Icons.check_rounded,
+                        color: Colors.white,
+                        size: size * 0.2,
+                      ),
+                    ),
                   ),
                 if (locked)
                   Container(

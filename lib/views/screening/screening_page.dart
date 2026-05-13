@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../../controllers/screening_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../widgets/round_action_button.dart';
-import 'screening_recordings_test_page.dart';
+import 'screening_accuracy_results_page.dart';
 
 class ScreeningPage extends StatelessWidget {
   final int childAge;
@@ -38,11 +38,6 @@ class _ScreeningViewState extends State<_ScreeningView> {
     Navigator.pop(context);
   }
 
-  Future<bool> _handleSystemBack(ScreeningController controller) async {
-    await _exitScreening(controller);
-    return false;
-  }
-
   Future<void> _handleNext(ScreeningController controller) async {
     final finished = await controller.goNext();
 
@@ -51,7 +46,7 @@ class _ScreeningViewState extends State<_ScreeningView> {
     if (finished) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (_) => ScreeningRecordingsTestPage(
+          builder: (_) => ScreeningAccuracyResultsPage(
             words: controller.words,
             recordingsByWordId: controller.recordingsByWordId,
           ),
@@ -95,8 +90,12 @@ class _ScreeningViewState extends State<_ScreeningView> {
   Widget build(BuildContext context) {
     return Consumer<ScreeningController>(
       builder: (context, controller, _) {
-        return WillPopScope(
-          onWillPop: () => _handleSystemBack(controller),
+        return PopScope(
+          onPopInvokedWithResult: (didPop, _) {
+            if (didPop) {
+              controller.cancelAndClearAll();
+            }
+          },
           child: Scaffold(
             body: SafeArea(
               child: Center(
