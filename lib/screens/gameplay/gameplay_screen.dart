@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../models/screening_word_model.dart';
@@ -52,6 +53,10 @@ class _GameplayScreenState extends State<GameplayScreen> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
     _words = ScreeningWordModel.resolveForAge(widget.childAge).take(4).toList();
     _wordIndex = widget.levelIndex.clamp(0, _words.length - 1).toInt();
     _promptTimer = Timer(const Duration(milliseconds: 900), _askCurrentWord);

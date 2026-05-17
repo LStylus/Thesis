@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
 import 'parent_info_page.dart';
 
@@ -19,6 +21,18 @@ class _SignupPageState extends State<SignupPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  bool _allowPop = false;
+  bool _isLeaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -27,20 +41,18 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<void> _goToLogin(AuthController authController) async {
+    if (_isLeaving) return;
+    _isLeaving = true;
+
     await authController.cancelPendingSignup();
     _emailController.clear();
     _passwordController.clear();
 
     if (!mounted) return;
+    setState(() {
+      _allowPop = true;
+    });
     Navigator.pop(context);
-  }
-
-  Future<bool> _handleSystemBack() async {
-    final authController = context.read<AuthController>();
-    await authController.cancelPendingSignup();
-    _emailController.clear();
-    _passwordController.clear();
-    return true;
   }
 
   Future<void> _goNext(AuthController authController) async {
@@ -56,9 +68,7 @@ class _SignupPageState extends State<SignupPage> {
     if (ok) {
       final shouldReset = await Navigator.push<bool>(
         context,
-        MaterialPageRoute(
-          builder: (_) => const ParentInfoPage(),
-        ),
+        MaterialPageRoute(builder: (_) => const ParentInfoPage()),
       );
 
       if (!mounted) return;
@@ -74,155 +84,109 @@ class _SignupPageState extends State<SignupPage> {
   Widget build(BuildContext context) {
     return Consumer<AuthController>(
       builder: (context, authController, _) {
-        return WillPopScope(
-          onWillPop: _handleSystemBack,
-          child: Scaffold(
-            body: SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 500),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+        return PopScope(
+          canPop: _allowPop,
+          onPopInvokedWithResult: (didPop, _) {
+            if (!didPop) {
+              _goToLogin(authController);
+            }
+          },
+          child: OceanAuthScaffold(
+            topSpacing: 132,
+            children: [
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    const Text(
+                      'Create Your Account',
+                      textAlign: TextAlign.center,
+                      style: OceanAuthTextStyles.title,
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'to begin a journey in Voice Voyage',
+                      textAlign: TextAlign.center,
+                      style: OceanAuthTextStyles.subtitle,
+                    ),
+                    const SizedBox(height: 30),
+                    CustomTextField(
+                      controller: _emailController,
+                      hintText: 'Email',
+                      onChanged: (_) => authController.clearError(),
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Please enter a valid email';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 11),
+                    CustomTextField(
+                      controller: _passwordController,
+                      hintText: 'Password',
+                      obscureText: true,
+                      onChanged: (_) => authController.clearError(),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    PrimaryButton(
+                      text: 'Sign up',
+                      onPressed: authController.isLoading
+                          ? null
+                          : () => _goNext(authController),
+                      isLoading: authController.isLoading,
+                    ),
+                    if (authController.errorMessage != null) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        authController.errorMessage!,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: AppColors.error,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 26),
+                    RichText(
+                      textAlign: TextAlign.center,
+                      text: TextSpan(
+                        style: const TextStyle(
+                          color: AppColors.textGray,
+                          fontSize: 14,
+                          letterSpacing: 0,
+                        ),
                         children: [
-                          const SizedBox(height: 24),
-                          const Text(
-                            'Create Your Account',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.primary,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            'to begin a journey in Voice Voyage',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.textGray,
-                              fontSize: 13,
-                            ),
-                          ),
-                          const SizedBox(height: 28),
-
-                          SizedBox(
-                            width: 390,
-                            child: CustomTextField(
-                              controller: _emailController,
-                              hintText: 'Email',
-                              onChanged: (_) => authController.clearError(),
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter your email';
-                                }
-                                if (!value.contains('@')) {
-                                  return 'Please enter a valid email';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          SizedBox(
-                            width: 390,
-                            child: CustomTextField(
-                              controller: _passwordController,
-                              hintText: 'Password',
-                              obscureText: true,
-                              onChanged: (_) => authController.clearError(),
-                              validator: (value) {
-                                if (value == null || value.isEmpty) {
-                                  return 'Please enter your password';
-                                }
-                                if (value.length < 6) {
-                                  return 'Password must be at least 6 characters';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          SizedBox(
-                            width: 390,
-                            child: PrimaryButton(
-                              text: 'Sign up',
-                              onPressed: authController.isLoading
-                                  ? null
-                                  : () => _goNext(authController),
-                              isLoading: authController.isLoading,
-                            ),
-                          ),
-
-                          if (authController.errorMessage != null) ...[
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: 390,
-                              child: Text(
-                                authController.errorMessage!,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                  color: AppColors.error,
-                                  fontSize: 12,
-                                ),
+                          const TextSpan(text: 'Already have an account? '),
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: GestureDetector(
+                              onTap: () => _goToLogin(authController),
+                              child: const Text(
+                                'Login here',
+                                style: OceanAuthTextStyles.link,
                               ),
                             ),
-                          ],
-
-                          const SizedBox(height: 16),
-                          RichText(
-                            textAlign: TextAlign.center,
-                            text: TextSpan(
-                              style: const TextStyle(
-                                color: AppColors.textGray,
-                                fontSize: 11.5,
-                              ),
-                              children: [
-                                const TextSpan(
-                                  text: 'Already have an account? ',
-                                ),
-                                WidgetSpan(
-                                  alignment: PlaceholderAlignment.middle,
-                                  child: GestureDetector(
-                                    onTap: () => _goToLogin(authController),
-                                    child: const Text(
-                                      'Login here',
-                                      style: TextStyle(
-                                        color: AppColors.textGray,
-                                        fontSize: 11.5,
-                                        fontWeight: FontWeight.w600,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
                           ),
-                          const SizedBox(height: 10),
-                          const Text(
-                            'Terms & Privacy | Privacy Policy',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppColors.textGray,
-                              fontSize: 11.5,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                          const SizedBox(height: 22),
                         ],
                       ),
                     ),
-                  ),
+                  ],
                 ),
               ),
-            ),
+            ],
           ),
         );
       },
