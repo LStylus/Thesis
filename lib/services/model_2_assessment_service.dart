@@ -21,7 +21,7 @@ class Model2AssessmentService {
   static String get defaultBaseUrl {
     if (_definedBaseUrl.isNotEmpty) return _definedBaseUrl;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://192.168.254.117:8001';
+      return 'https://wystan28-phonememodel.hf.space';
     }
     return 'http://127.0.0.1:8001';
   }
