@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -34,6 +35,7 @@ class _ScreeningViewState extends State<_ScreeningView> {
   static const Color _circleGray = Color(0xFFE2E2E2);
   static const Color _iconGray = Color(0xFF7F7F7F);
   static const Color _disabledGray = Color(0xFFBDBDBD);
+  
   bool _allowPop = false;
   bool _hasStarted = false;
 
@@ -61,11 +63,17 @@ class _ScreeningViewState extends State<_ScreeningView> {
     if (!mounted) return;
 
     if (finished) {
+      debugPrint(
+        '[screening] opening_results_page words=${controller.words.length} '
+        'recordings=${controller.recordingsByWordId.length} '
+        'model_results=${controller.assessmentResultsByWordId.length}',
+      );
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => ScreeningAccuracyResultsPage(
             words: controller.words,
             recordingsByWordId: controller.recordingsByWordId,
+            assessmentResultsByWordId: controller.assessmentResultsByWordId,
           ),
         ),
       );
@@ -121,7 +129,7 @@ class _ScreeningViewState extends State<_ScreeningView> {
           style: OceanAuthTextStyles.subtitle,
         ),
         const SizedBox(height: 48),
-        const FigmaWhaleMascot(width: 304, height: 170),
+        const FigmaWhaleMascot(width: 304, height: 170), // Ensure this widget is correctly imported if defined elsewhere
         const SizedBox(height: 8),
         const _ScreeningFeature(text: 'A total of 15 words'),
         const SizedBox(height: 11),
@@ -195,11 +203,13 @@ class _ScreeningViewState extends State<_ScreeningView> {
                     child: Text(
                       controller.isRecording
                           ? 'Recording... please wait, it will stop automatically.'
-                          : controller.hasRecording
-                          ? 'Would you like to record again or continue?'
-                          : controller.isPromptPlaying
-                          ? 'Prompt is playing... please wait before recording.'
-                          : 'Tap the speaker to hear the word, then tap the microphone to record.',
+                          : controller.isProcessing
+                              ? 'Checking pronunciation with the model...'
+                              : controller.hasRecording
+                                  ? 'Would you like to record again or continue?'
+                                  : controller.isPromptPlaying
+                                      ? 'Prompt is playing... please wait before recording.'
+                                      : 'Tap the speaker to hear the word, then tap the microphone to record.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         color: AppColors.textGray,
@@ -237,8 +247,8 @@ class _ScreeningViewState extends State<_ScreeningView> {
                           iconColor: controller.isPromptPlaying
                               ? AppColors.primary
                               : (controller.canPlayPrompt
-                                    ? _iconGray
-                                    : _disabledGray),
+                                  ? _iconGray
+                                  : _disabledGray),
                         ),
                         const SizedBox(width: 22),
                         RoundActionButton(
@@ -252,8 +262,8 @@ class _ScreeningViewState extends State<_ScreeningView> {
                           iconColor: controller.isRecording
                               ? Colors.red
                               : (controller.canRecord
-                                    ? _iconGray
-                                    : _disabledGray),
+                                  ? _iconGray
+                                  : _disabledGray),
                         ),
                       ],
                     )
@@ -263,22 +273,22 @@ class _ScreeningViewState extends State<_ScreeningView> {
                       children: [
                         RoundActionButton(
                           icon: Icons.refresh_rounded,
-                          onTap: controller.isRecording
+                          onTap: controller.isRecording || controller.isProcessing
                               ? null
                               : controller.repeatCurrentWord,
                           fillColor: _circleGray,
-                          iconColor: controller.isRecording
+                          iconColor: controller.isRecording || controller.isProcessing
                               ? _disabledGray
                               : _iconGray,
                         ),
                         const SizedBox(width: 22),
                         RoundActionButton(
                           icon: Icons.arrow_forward_rounded,
-                          onTap: controller.isRecording
+                          onTap: controller.isRecording || controller.isProcessing
                               ? null
                               : () => _handleNext(controller),
                           fillColor: _circleGray,
-                          iconColor: controller.isRecording
+                          iconColor: controller.isRecording || controller.isProcessing
                               ? _disabledGray
                               : _iconGray,
                         ),
