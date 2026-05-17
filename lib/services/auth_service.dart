@@ -26,6 +26,14 @@ class AuthService {
 
   Future<void> signOut() => _auth.signOut();
 
+  Future<void> updateCurrentUserDisplayName(String displayName) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    await user.updateDisplayName(displayName);
+    await user.reload();
+  }
+
   // FUTURE GOOGLE SIGN-IN
   // ----------------------------------------------------------
   // Uncomment later after adding:

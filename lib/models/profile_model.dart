@@ -1,6 +1,9 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class ProfileModel {
   final String profileId;
   final String userId;
+  final String email;
   final String progressId;
   final DateTime birthDate;
   final String categoryId;
@@ -13,6 +16,7 @@ class ProfileModel {
   ProfileModel({
     required this.profileId,
     required this.userId,
+    this.email = '',
     required this.progressId,
     required this.birthDate,
     required this.categoryId,
@@ -40,34 +44,57 @@ class ProfileModel {
   }
 
   Map<String, dynamic> toMap() {
+    final childAge = age;
+
     return {
       'profileId': profileId,
       'userId': userId,
+      'uid': userId,
+      'email': email,
       'progressId': progressId,
-      'birthDate': birthDate.toIso8601String(),
-      'age': age,
+      'birthDate': Timestamp.fromDate(birthDate),
+      'childBirthDate': Timestamp.fromDate(birthDate),
+      'age': childAge,
+      'childAge': childAge,
       'categoryId': categoryId,
       'courseNo': courseNo,
       'parentName': parentName,
       'relationshipToChild': relationshipToChild,
       'childName': childName,
+      'profileComplete': true,
     };
   }
 
   factory ProfileModel.fromMap(Map<String, dynamic> map) {
-    final birthDate =
-        DateTime.tryParse(map['birthDate'] ?? '') ?? DateTime.now();
+    final parsedBirthDate = _parseDate(
+      map['birthDate'] ?? map['childBirthDate'],
+    );
 
     return ProfileModel(
-      profileId: map['profileId'] ?? '',
-      userId: map['userId'] ?? '',
-      progressId: map['progressId'] ?? '',
-      birthDate: birthDate,
-      categoryId: map['categoryId'] ?? '',
-      courseNo: map['courseNo'] ?? '',
-      parentName: map['parentName'] ?? '',
-      relationshipToChild: map['relationshipToChild'] ?? '',
-      childName: map['childName'] ?? '',
+      profileId: _stringValue(map['profileId'] ?? map['uid'] ?? map['userId']),
+      userId: _stringValue(map['userId'] ?? map['uid'] ?? map['profileId']),
+      email: _stringValue(map['email']),
+      progressId: _stringValue(map['progressId']),
+      birthDate: parsedBirthDate,
+      categoryId: _stringValue(map['categoryId']),
+      courseNo: _stringValue(map['courseNo']),
+      parentName: _stringValue(map['parentName']),
+      relationshipToChild: _stringValue(map['relationshipToChild']),
+      childName: _stringValue(map['childName']),
     );
+  }
+
+  static DateTime _parseDate(Object? value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is String) {
+      return DateTime.tryParse(value) ?? DateTime.now();
+    }
+    return DateTime.now();
+  }
+
+  static String _stringValue(Object? value) {
+    if (value == null) return '';
+    return value.toString();
   }
 }

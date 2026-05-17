@@ -119,6 +119,7 @@ class AuthController extends ChangeNotifier {
       final profile = ProfileModel(
         profileId: uid,
         userId: uid,
+        email: _draft.email,
         progressId: '',
         birthDate: birthDate,
         categoryId: '',
@@ -129,6 +130,7 @@ class AuthController extends ChangeNotifier {
       );
 
       await _userService.createUserAndProfile(user: appUser, profile: profile);
+      await _authService.updateCurrentUserDisplayName(_draft.parentName);
 
       pendingUid = null;
       return true;

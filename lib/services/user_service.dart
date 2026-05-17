@@ -17,14 +17,25 @@ class UserService {
     required ProfileModel profile,
   }) async {
     final batch = _firestore.batch();
+    final profileData = profile.toMap();
 
     batch.set(_users.doc(user.userId), {
       ...user.toMap(),
+      'role': 'parent',
+      'profileId': profile.profileId,
+      'parentName': profile.parentName,
+      'relationshipToChild': profile.relationshipToChild,
+      'childName': profile.childName,
+      'childBirthDate': Timestamp.fromDate(profile.birthDate),
+      'childAge': profile.age,
+      'profileComplete': true,
       'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
     batch.set(_profiles.doc(profile.userId), {
-      ...profile.toMap(),
+      ...profileData,
+      'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
 
@@ -32,7 +43,10 @@ class UserService {
   }
 
   Future<void> deleteUserProfile(String uid) async {
-    await _profiles.doc(uid).delete();
+    final batch = _firestore.batch();
+    batch.delete(_profiles.doc(uid));
+    batch.delete(_users.doc(uid));
+    await batch.commit();
   }
 
   Stream<ProfileModel?> streamProfileByUserId(String uid) {
