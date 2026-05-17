@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
-import '../../widgets/auth_header.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
 import 'child_info_page.dart';
 
@@ -20,6 +21,8 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
   final _nameController = TextEditingController();
 
   String? _selectedRelationship;
+  bool _allowPop = false;
+  bool _isReturningToSignup = false;
 
   final List<String> _relationships = const [
     'Mother',
@@ -33,6 +36,10 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     final authController = context.read<AuthController>();
     _nameController.text = authController.draft.parentName;
     if (authController.draft.relationshipToChild.isNotEmpty) {
@@ -46,13 +53,18 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
     super.dispose();
   }
 
-  Future<bool> _returnToSignup() async {
+  Future<void> _returnToSignup() async {
+    if (_isReturningToSignup) return;
+    _isReturningToSignup = true;
+
     final authController = context.read<AuthController>();
     await authController.cancelPendingSignup();
 
-    if (!mounted) return false;
+    if (!mounted) return;
+    setState(() {
+      _allowPop = true;
+    });
     Navigator.pop(context, true);
-    return false;
   }
 
   void _goNext(AuthController authController) {
@@ -65,9 +77,7 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const ChildInfoPage(),
-      ),
+      MaterialPageRoute(builder: (_) => const ChildInfoPage()),
     );
   }
 
@@ -75,96 +85,92 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
   Widget build(BuildContext context) {
     final authController = context.read<AuthController>();
 
-    return WillPopScope(
-      onWillPop: _returnToSignup,
-      child: Scaffold(
-        body: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      AuthHeader(
-                        title: 'Please tell us about yourself',
-                        onBack: _returnToSignup,
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'person completing the pre-assessment questions',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.textGray,
-                          fontSize: 13,
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      SizedBox(
-                        width: 390,
-                        child: CustomTextField(
-                          controller: _nameController,
-                          hintText: 'Name',
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your name';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      SizedBox(
-                        width: 390,
-                        child: DropdownButtonFormField<String>(
-                          value: _selectedRelationship,
-                          decoration: const InputDecoration(
-                            hintText: 'Relationship to the child',
-                          ),
-                          items: _relationships
-                              .map(
-                                (value) => DropdownMenuItem(
-                                  value: value,
-                                  child: Text(
-                                    value,
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedRelationship = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please select your relationship';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      SizedBox(
-                        width: 390,
-                        child: PrimaryButton(
-                          text: 'Next',
-                          onPressed: () => _goNext(authController),
-                        ),
-                      ),
-                    ],
-                  ),
+    return PopScope(
+      canPop: _allowPop,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) {
+          _returnToSignup();
+        }
+      },
+      child: OceanAuthScaffold(
+        topSpacing: 82,
+        leading: IconButton(
+          onPressed: _returnToSignup,
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          color: const Color(0xFFC3C3C3),
+        ),
+        children: [
+          Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                const Text(
+                  'Please tell us about\nyourself',
+                  textAlign: TextAlign.center,
+                  style: OceanAuthTextStyles.title,
                 ),
-              ),
+                const SizedBox(height: 8),
+                const Text(
+                  'person completing the screening form',
+                  textAlign: TextAlign.center,
+                  style: OceanAuthTextStyles.subtitle,
+                ),
+                const SizedBox(height: 30),
+                CustomTextField(
+                  controller: _nameController,
+                  hintText: 'Name',
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter your name';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 11),
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedRelationship,
+                  decoration: OceanFormStyles.inputDecoration(
+                    'Relationship to the Child',
+                  ),
+                  icon: const Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: AppColors.borderGray,
+                  ),
+                  items: _relationships
+                      .map(
+                        (value) => DropdownMenuItem(
+                          value: value,
+                          child: Text(
+                            value,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedRelationship = value;
+                    });
+                  },
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please select your relationship';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                PrimaryButton(
+                  text: 'Next',
+                  onPressed: () => _goNext(authController),
+                ),
+              ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }

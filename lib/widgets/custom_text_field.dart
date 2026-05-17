@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'ocean_auth_scaffold.dart';
+
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
@@ -26,9 +28,13 @@ class CustomTextField extends StatelessWidget {
       validator: validator,
       onChanged: onChanged,
       keyboardType: keyboardType,
-      decoration: InputDecoration(
-        hintText: hintText,
+      style: const TextStyle(
+        fontSize: 16,
+        color: Colors.black87,
+        fontWeight: FontWeight.w500,
+        letterSpacing: 0,
       ),
+      decoration: OceanFormStyles.inputDecoration(hintText),
     );
   }
 }

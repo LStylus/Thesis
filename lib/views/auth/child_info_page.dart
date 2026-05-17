@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../models/profile_model.dart';
-import '../../widgets/auth_header.dart';
 import '../../widgets/custom_text_field.dart';
+import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
 import '../screening/screening_page.dart';
 
@@ -27,6 +28,10 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
   @override
   void initState() {
     super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
     final authController = context.read<AuthController>();
     _childNameController.text = authController.draft.childName;
     _selectedDate = authController.draft.childBirthDate;
@@ -113,141 +118,121 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: Form(
-                key: _formKey,
-                child: Consumer<AuthController>(
-                  builder: (context, authController, _) {
-                    final agePreview = _selectedDate != null
-                        ? ProfileModel.calculateAge(_selectedDate!)
-                        : null;
+    return Consumer<AuthController>(
+      builder: (context, authController, _) {
+        final agePreview = _selectedDate != null
+            ? ProfileModel.calculateAge(_selectedDate!)
+            : null;
 
-                    final showAgeWarningInline =
-                        agePreview != null && !_isSupportedAge(agePreview);
+        final showAgeWarningInline =
+            agePreview != null && !_isSupportedAge(agePreview);
 
-                    return Column(
-                      children: [
-                        AuthHeader(
-                          title: 'Almost there!',
-                          onBack: () => Navigator.pop(context),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          "personalize the child's learning experience",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.textGray,
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
+        return OceanAuthScaffold(
+          topSpacing: 132,
+          leading: IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            color: const Color(0xFFC3C3C3),
+          ),
+          children: [
+            Form(
+              key: _formKey,
+              child: Column(
+                children: [
+                  const Text(
+                    'Almost there',
+                    textAlign: TextAlign.center,
+                    style: OceanAuthTextStyles.title,
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'tell us about the child',
+                    textAlign: TextAlign.center,
+                    style: OceanAuthTextStyles.subtitle,
+                  ),
+                  const SizedBox(height: 30),
+                  CustomTextField(
+                    controller: _childNameController,
+                    hintText: "Child's Name",
+                    onChanged: (_) => authController.clearError(),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Please enter the child's name";
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 11),
+                  TextFormField(
+                    controller: _birthDateController,
+                    readOnly: true,
+                    onTap: _pickDate,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: 0,
+                    ),
+                    decoration: OceanFormStyles.inputDecoration(
+                      "Child's Birthdate",
+                      suffixIcon: IconButton(
+                        onPressed: _pickDate,
+                        color: AppColors.borderGray,
+                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (_selectedDate == null) {
+                        return "Please select the child's birth date";
+                      }
 
-                        SizedBox(
-                          width: 390,
-                          child: CustomTextField(
-                            controller: _childNameController,
-                            hintText: "Child's Name",
-                            onChanged: (_) => authController.clearError(),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return "Please enter the child's name";
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 12),
+                      final age = ProfileModel.calculateAge(_selectedDate!);
 
-                        SizedBox(
-                          width: 390,
-                          child: TextFormField(
-                            controller: _birthDateController,
-                            readOnly: true,
-                            onTap: _pickDate,
-                            decoration: InputDecoration(
-                              hintText: "Child's Birth Date",
-                              suffixIcon: IconButton(
-                                onPressed: _pickDate,
-                                icon: const Icon(Icons.calendar_today_outlined),
-                              ),
-                            ),
-                            validator: (value) {
-                              if (_selectedDate == null) {
-                                return "Please select the child's birth date";
-                              }
+                      if (age < 4 || age > 8) {
+                        return 'Only ages 4 to 8 are allowed.';
+                      }
 
-                              final age = ProfileModel.calculateAge(
-                                _selectedDate!,
-                              );
-
-                              if (age < 4 || age > 8) {
-                                return 'Only ages 4 to 8 are allowed.';
-                              }
-
-                              return null;
-                            },
-                          ),
-                        ),
-
-                        if (showAgeWarningInline) ...[
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: 390,
-                            child: Text(
-                              'Warning: age $agePreview is outside the supported range. '
-                              'Only children aged 4 to 8 can proceed.',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: Colors.orange,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-
-                        const SizedBox(height: 16),
-
-                        SizedBox(
-                          width: 390,
-                          child: PrimaryButton(
-                            text: 'Complete',
-                            onPressed: authController.isLoading
-                                ? null
-                                : () => _complete(authController),
-                            isLoading: authController.isLoading,
-                          ),
-                        ),
-
-                        if (authController.errorMessage != null) ...[
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: 390,
-                            child: Text(
-                              authController.errorMessage!,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                color: AppColors.error,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    );
-                  },
-                ),
+                      return null;
+                    },
+                  ),
+                  if (showAgeWarningInline) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Warning: age $agePreview is outside the supported range. '
+                      'Only children aged 4 to 8 can proceed.',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.orange,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  PrimaryButton(
+                    text: 'Complete',
+                    onPressed: authController.isLoading
+                        ? null
+                        : () => _complete(authController),
+                    isLoading: authController.isLoading,
+                  ),
+                  if (authController.errorMessage != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      authController.errorMessage!,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: AppColors.error,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-          ),
-        ),
-      ),
+          ],
+        );
+      },
     );
   }
 }
