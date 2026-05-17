@@ -2,54 +2,60 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_recorder/flutter_recorder.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:record/record.dart';
 
 class AudioRecordingService {
-  final Recorder _recorder = Recorder.instance;
+  final AudioRecorder _recorder = AudioRecorder();
 
   bool _hasMicPermission = false;
   bool _isRecorderReady = false;
-  bool _isInitializing = false;
+  Future<bool>? _initializeFuture;
   bool _isRecording = false;
   String? _activeRecordingPath;
 
+  static const int sampleRate = 16000;
+  static const int channelCount = 1;
   static const Duration defaultRecordDuration = Duration(seconds: 5);
 
-  Future<bool> initialize() async {
-    if (_isInitializing) return false;
-    if (_hasMicPermission && _isRecorderReady) return true;
+  static const RecordConfig _wav16kMonoConfig = RecordConfig(
+    encoder: AudioEncoder.wav,
+    sampleRate: sampleRate,
+    numChannels: channelCount,
+  );
 
-    _isInitializing = true;
+  bool get hasMicPermission => _hasMicPermission;
+  bool get isRecorderReady => _isRecorderReady;
+  bool get isRecording => _isRecording;
+
+  Future<bool> initialize() async {
+    if (_hasMicPermission && _isRecorderReady) return true;
+    _initializeFuture ??= _initializeRecorder();
 
     try {
-      if (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.macOS) {
-        _hasMicPermission = await Permission.microphone.request().isGranted;
-      } else {
-        _hasMicPermission = true;
-      }
+      return await _initializeFuture!;
+    } finally {
+      _initializeFuture = null;
+    }
+  }
 
+  Future<bool> _initializeRecorder() async {
+    try {
+      _hasMicPermission = await _recorder.hasPermission();
       if (!_hasMicPermission) {
         _isRecorderReady = false;
+        debugPrint('[audio-recording] init_denied microphone_permission=false');
         return false;
       }
 
-      await _recorder.init(
-        format: PCMFormat.f32le,
-        sampleRate: 16000,
-        channels: RecorderChannels.mono,
-      );
-      _recorder.start();
       _isRecorderReady = true;
+      debugPrint('[audio-recording] init_ready microphone_permission=true');
       return true;
-    } catch (_) {
+    } catch (error) {
+      debugPrint('[audio-recording] init_error error=$error');
+      _hasMicPermission = false;
       _isRecorderReady = false;
       return false;
-    } finally {
-      _isInitializing = false;
     }
   }
 
@@ -70,25 +76,32 @@ class AudioRecordingService {
           '${tempDir.path}/${safePrefix}_${DateTime.now().millisecondsSinceEpoch}.wav';
 
       _activeRecordingPath = filePath;
-      _recorder.startRecording(completeFilePath: filePath);
+      debugPrint(
+        '[audio-recording] start path=$filePath '
+        'encoder=wav sample_rate=$sampleRate channels=$channelCount '
+        'duration_ms=${duration.inMilliseconds}',
+      );
+      await _recorder.start(_wav16kMonoConfig, path: filePath);
       _isRecording = true;
 
       await Future.delayed(duration);
       return await stopAndVerify();
-    } catch (_) {
+    } catch (error) {
+      debugPrint('[audio-recording] start_error error=$error');
       await cancel();
       return null;
     }
   }
 
   Future<String?> stopAndVerify() async {
-    if (!_isRecording) return null;
+    final recorderIsRecording = await _recorder.isRecording();
+    if (!_isRecording && !recorderIsRecording) return null;
 
     try {
-      _recorder.stopRecording();
+      final stoppedPath = await _recorder.stop();
       _isRecording = false;
 
-      final finalPath = _activeRecordingPath;
+      final finalPath = stoppedPath ?? _activeRecordingPath;
       _activeRecordingPath = null;
 
       if (finalPath == null || finalPath.isEmpty) return null;
@@ -99,8 +112,30 @@ class AudioRecordingService {
       if (!await file.exists()) return null;
       final fileSize = await file.length();
 
-      return fileSize > 0 ? finalPath : null;
-    } catch (_) {
+      if (fileSize <= 44) {
+        debugPrint(
+          '[audio-recording] stop_invalid path=$finalPath bytes=$fileSize '
+          'reason=too_small',
+        );
+        return null;
+      }
+      final hasWavHeader = await _hasWavHeader(file);
+      if (!hasWavHeader) {
+        debugPrint(
+          '[audio-recording] stop_invalid path=$finalPath bytes=$fileSize '
+          'reason=missing_wav_header',
+        );
+        return null;
+      }
+
+      debugPrint(
+        '[audio-recording] stop_valid path=$finalPath bytes=$fileSize '
+        'wav_header=$hasWavHeader',
+      );
+
+      return finalPath;
+    } catch (error) {
+      debugPrint('[audio-recording] stop_error error=$error');
       _isRecording = false;
       _activeRecordingPath = null;
       return null;
@@ -109,8 +144,9 @@ class AudioRecordingService {
 
   Future<void> cancel() async {
     try {
-      if (_isRecording) {
-        _recorder.stopRecording();
+      final recorderIsRecording = await _recorder.isRecording();
+      if (_isRecording || recorderIsRecording) {
+        await _recorder.cancel();
       }
 
       final activePath = _activeRecordingPath;
@@ -130,6 +166,17 @@ class AudioRecordingService {
 
   Future<void> dispose() async {
     await cancel();
-    _recorder.deinit();
+    await _recorder.dispose();
+  }
+
+  Future<bool> _hasWavHeader(File file) async {
+    final header = await file
+        .openRead(0, 12)
+        .fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
+    if (header.length < 12) return false;
+
+    final riff = String.fromCharCodes(header.sublist(0, 4));
+    final wave = String.fromCharCodes(header.sublist(8, 12));
+    return riff == 'RIFF' && wave == 'WAVE';
   }
 }

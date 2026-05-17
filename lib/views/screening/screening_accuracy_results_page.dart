@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -12,11 +13,13 @@ import '../auth/auth_gate.dart';
 class ScreeningAccuracyResultsPage extends StatefulWidget {
   final List<ScreeningWordModel> words;
   final Map<String, String> recordingsByWordId;
+  final Map<String, Model2AssessmentResult> assessmentResultsByWordId;
 
   const ScreeningAccuracyResultsPage({
     super.key,
     required this.words,
     required this.recordingsByWordId,
+    required this.assessmentResultsByWordId,
   });
 
   @override
@@ -40,18 +43,50 @@ class _ScreeningAccuracyResultsPageState
   }
 
   Future<void> _runAssessments() async {
+    debugPrint(
+      '[screening-api] run_start words=${widget.words.length} '
+      'recordings=${widget.recordingsByWordId.length} '
+      'precomputed_results=${widget.assessmentResultsByWordId.length} '
+      'base_url=${_assessmentService.baseUrl}',
+    );
+
     for (final word in widget.words) {
       final recordingPath = widget.recordingsByWordId[word.id];
-      final result = recordingPath == null
-          ? Model2AssessmentResult.failure(
-              word: word,
-              recordingPath: '',
-              error: 'No recording was captured for this word.',
-            )
-          : await _assessmentService.assess(
-              word: word,
-              recordingPath: recordingPath,
-            );
+      final precomputedResult = widget.assessmentResultsByWordId[word.id];
+      debugPrint(
+        '[screening-api] queue_word word=${word.displayWord} '
+        'word_id=${word.id} has_recording=${recordingPath != null} '
+        'has_precomputed_result=${precomputedResult != null}',
+      );
+
+      final Model2AssessmentResult result;
+      if (precomputedResult != null) {
+        result = precomputedResult;
+        final score = result.overallScore?.toStringAsFixed(2);
+        debugPrint(
+          '[screening-api] using_precomputed_result '
+          'word=${result.displayWord} word_id=${result.wordId} '
+          'score=$score process_count=${result.detectedProcesses.length} '
+          'processes=${result.detectedProcessSummary}',
+        );
+      } else if (recordingPath == null) {
+        result = Model2AssessmentResult.failure(
+          word: word,
+          recordingPath: '',
+          error: 'No recording was captured for this word.',
+        );
+      } else {
+        debugPrint(
+          '[screening-api] fallback_assess_start word=${word.displayWord} '
+          'word_id=${word.id} path=$recordingPath',
+        );
+        result = await _assessmentService.assess(
+          word: word,
+          recordingPath: recordingPath,
+        );
+      }
+
+      _logDetectedProcesses(result);
 
       if (!mounted) return;
       setState(() {
@@ -61,6 +96,11 @@ class _ScreeningAccuracyResultsPageState
     }
 
     final filePath = await _writeTemporaryResultsFile();
+    debugPrint(
+      '[screening-api] run_complete processed=$_processedCount '
+      'detected_processes=${_detectedProcessesForPayload.length} '
+      'result_file=$filePath',
+    );
     if (!mounted) return;
 
     setState(() {
@@ -81,6 +121,7 @@ class _ScreeningAccuracyResultsPageState
       'model': 'Model-2',
       'model_base_url': _assessmentService.baseUrl,
       'average_accuracy': _averageAccuracy,
+      'detected_processes': _detectedProcessesForPayload,
       'results': _results.map((result) => result.toJson()).toList(),
     };
 
@@ -99,6 +140,57 @@ class _ScreeningAccuracyResultsPageState
     return scores.reduce((a, b) => a + b) / scores.length;
   }
 
+  List<Map<String, dynamic>> get _detectedProcessesForPayload {
+    return _results
+        .expand((result) {
+          return result.detectedProcesses.map((process) {
+            return {
+              'word_id': result.wordId,
+              'display_word': result.displayWord,
+              ...process,
+            };
+          });
+        })
+        .toList();
+  }
+
+  List<String> get _detectedProcessNames {
+    final names = <String>{};
+    for (final result in _results) {
+      for (final process in result.detectedProcesses) {
+        final name = process['process']?.toString();
+        if (name != null && name.isNotEmpty) {
+          names.add(name);
+        }
+      }
+    }
+    return names.toList();
+  }
+
+  void _logDetectedProcesses(Model2AssessmentResult result) {
+    final prefix =
+        '[screening-api] word=${result.displayWord} word_id=${result.wordId}';
+
+    if (!result.isSuccess) {
+      debugPrint('$prefix status=error message=${result.error}');
+      return;
+    }
+
+    if (result.detectedProcesses.isEmpty) {
+      debugPrint('$prefix detected_processes=[]');
+      return;
+    }
+
+    for (final process in result.detectedProcesses) {
+      final name = process['process'];
+      final position = process['position'];
+      final detail = process['detail'];
+      debugPrint(
+        '$prefix process=$name position=$position detail=$detail',
+      );
+    }
+  }
+
   void _goHome() {
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthGate()),
@@ -108,7 +200,7 @@ class _ScreeningAccuracyResultsPageState
 
   @override
   Widget build(BuildContext context) {
-    final averageAccuracy = _averageAccuracy;
+    final detectedProcessNames = _detectedProcessNames;
 
     return Scaffold(
       body: SafeArea(
@@ -133,7 +225,7 @@ class _ScreeningAccuracyResultsPageState
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Model-2 accuracy after signup screening',
+                    'Detected phonological processes from the screening API',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: AppColors.textGray,
@@ -163,7 +255,9 @@ class _ScreeningAccuracyResultsPageState
                       ),
                     ),
                   ] else ...[
-                    _AverageAccuracyCard(averageAccuracy: averageAccuracy),
+                    _DetectedProcessSummaryCard(
+                      processNames: detectedProcessNames,
+                    ),
                     if (_resultsFilePath != null) ...[
                       const SizedBox(height: 12),
                       _TemporaryFileCard(path: _resultsFilePath!),
@@ -203,16 +297,16 @@ class _ScreeningAccuracyResultsPageState
   }
 }
 
-class _AverageAccuracyCard extends StatelessWidget {
-  final double? averageAccuracy;
+class _DetectedProcessSummaryCard extends StatelessWidget {
+  final List<String> processNames;
 
-  const _AverageAccuracyCard({required this.averageAccuracy});
+  const _DetectedProcessSummaryCard({required this.processNames});
 
   @override
   Widget build(BuildContext context) {
-    final text = averageAccuracy == null
-        ? 'No successful model results yet'
-        : '${averageAccuracy!.toStringAsFixed(1)}% average accuracy';
+    final text = processNames.isEmpty
+        ? 'No detected phonological process returned yet'
+        : 'Detected: ${processNames.join(', ')}';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -331,6 +425,15 @@ class _ResultCard extends StatelessWidget {
                 color: AppColors.textGray,
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Process: ${result.detectedProcessSummary}',
+              style: const TextStyle(
+                color: Color(0xFF3F5F73),
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ] else

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -44,11 +45,17 @@ class _ScreeningViewState extends State<_ScreeningView> {
     if (!mounted) return;
 
     if (finished) {
+      debugPrint(
+        '[screening] opening_results_page words=${controller.words.length} '
+        'recordings=${controller.recordingsByWordId.length} '
+        'model_results=${controller.assessmentResultsByWordId.length}',
+      );
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => ScreeningAccuracyResultsPage(
             words: controller.words,
             recordingsByWordId: controller.recordingsByWordId,
+            assessmentResultsByWordId: controller.assessmentResultsByWordId,
           ),
         ),
       );
@@ -134,6 +141,8 @@ class _ScreeningViewState extends State<_ScreeningView> {
                           child: Text(
                             controller.isRecording
                                 ? 'Recording... please wait, it will stop automatically.'
+                                : controller.isProcessing
+                                ? 'Checking pronunciation with the model...'
                                 : controller.hasRecording
                                 ? 'Would you like to record again or continue?'
                                 : controller.isPromptPlaying
@@ -202,22 +211,30 @@ class _ScreeningViewState extends State<_ScreeningView> {
                             children: [
                               RoundActionButton(
                                 icon: Icons.refresh_rounded,
-                                onTap: controller.isRecording
+                                onTap:
+                                    controller.isRecording ||
+                                        controller.isProcessing
                                     ? null
                                     : controller.repeatCurrentWord,
                                 fillColor: _circleGray,
-                                iconColor: controller.isRecording
+                                iconColor:
+                                    controller.isRecording ||
+                                        controller.isProcessing
                                     ? _disabledGray
                                     : _iconGray,
                               ),
                               const SizedBox(width: 22),
                               RoundActionButton(
                                 icon: Icons.arrow_forward_rounded,
-                                onTap: controller.isRecording
+                                onTap:
+                                    controller.isRecording ||
+                                        controller.isProcessing
                                     ? null
                                     : () => _handleNext(controller),
                                 fillColor: _circleGray,
-                                iconColor: controller.isRecording
+                                iconColor:
+                                    controller.isRecording ||
+                                        controller.isProcessing
                                     ? _disabledGray
                                     : _iconGray,
                               ),

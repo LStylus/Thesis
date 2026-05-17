@@ -3,20 +3,21 @@ import 'dart:io';
 
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter_recorder/flutter_recorder.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../models/screening_word_model.dart';
+import '../services/audio_recording_service.dart';
+import '../services/model_2_assessment_service.dart';
 
 class ScreeningController extends ChangeNotifier {
   final int childAge;
 
   final AudioPlayer _player = AudioPlayer();
-  final Recorder _recorder = Recorder.instance;
+  final AudioRecordingService _recordingService = AudioRecordingService();
+  final Model2AssessmentService _assessmentService = Model2AssessmentService();
 
   late final List<ScreeningWordModel> _words;
   final Map<String, String> _recordingsByWordId = {};
+  final Map<String, Model2AssessmentResult> _assessmentResultsByWordId = {};
 
   int _currentIndex = 0;
 
@@ -27,14 +28,14 @@ class ScreeningController extends ChangeNotifier {
   bool isRecorderReady = false;
 
   bool _isInitializingRecorder = false;
+  int _recordingAttempt = 0;
 
-  String? _activeRecordingPath;
   String? errorMessage;
 
-  Timer? _autoStopTimer;
   StreamSubscription<PlayerState>? _playerStateSub;
 
-  static const Duration _autoRecordDuration = Duration(seconds: 3);
+  static const Duration _autoRecordDuration =
+      AudioRecordingService.defaultRecordDuration;
 
   ScreeningController({required this.childAge}) {
     _words = ScreeningWordModel.resolveForAge(childAge);
@@ -42,6 +43,7 @@ class ScreeningController extends ChangeNotifier {
   }
 
   Future<void> _init() async {
+    debugPrint('[screening] init child_age=$childAge words=${_words.length}');
     await _initRecorder();
 
     _playerStateSub = _player.onPlayerStateChanged.listen((state) {
@@ -61,30 +63,19 @@ class ScreeningController extends ChangeNotifier {
     try {
       errorMessage = null;
 
-      if (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.macOS) {
-        final granted = await Permission.microphone.request().isGranted;
-        hasMicPermission = granted;
-      } else {
-        hasMicPermission = true;
-      }
-
-      if (!hasMicPermission) {
-        isRecorderReady = false;
-        errorMessage = 'Microphone permission was denied.';
-        return;
-      }
-
-      await _recorder.init(
-        format: PCMFormat.f32le,
-        sampleRate: 16000,
-        channels: RecorderChannels.mono,
+      final ready = await _recordingService.initialize();
+      hasMicPermission = _recordingService.hasMicPermission;
+      isRecorderReady = ready;
+      debugPrint(
+        '[screening] recorder_init ready=$ready '
+        'has_mic_permission=$hasMicPermission',
       );
 
-      _recorder.start();
-
-      isRecorderReady = true;
+      if (!ready) {
+        errorMessage = hasMicPermission
+            ? 'Recorder setup failed. Please try again.'
+            : 'Microphone permission was denied.';
+      }
     } catch (e) {
       isRecorderReady = false;
       errorMessage = 'Recorder setup failed: $e';
@@ -103,6 +94,8 @@ class ScreeningController extends ChangeNotifier {
   //will remove
   Map<String, String> get recordingsByWordId =>
       Map.unmodifiable(_recordingsByWordId);
+  Map<String, Model2AssessmentResult> get assessmentResultsByWordId =>
+      Map.unmodifiable(_assessmentResultsByWordId);
 
   bool get hasRecording => _recordingsByWordId.containsKey(currentWord.id);
   String? get currentRecordingPath => _recordingsByWordId[currentWord.id];
@@ -142,6 +135,12 @@ class ScreeningController extends ChangeNotifier {
   }
 
   Future<void> startTimedRecording() async {
+    debugPrint(
+      '[screening] record_requested word=${currentWord.displayWord} '
+      'word_id=${currentWord.id} can_record=$canRecord '
+      'ready=$isRecorderReady mic=$hasMicPermission',
+    );
+
     if (_isInitializingRecorder) return;
 
     if (!isRecorderReady || !hasMicPermission) {
@@ -154,30 +153,84 @@ class ScreeningController extends ChangeNotifier {
     isProcessing = true;
     notifyListeners();
 
+    final word = currentWord;
+    final wordId = word.id;
+    final attempt = ++_recordingAttempt;
+
     try {
       await _player.stop();
-
-      final tempDir = await getTemporaryDirectory();
-      final filePath =
-          '${tempDir.path}/${currentWord.id}_${DateTime.now().millisecondsSinceEpoch}.wav';
-
-      _activeRecordingPath = filePath;
-
-      _recorder.startRecording(completeFilePath: filePath);
 
       isRecording = true;
       isProcessing = false;
       notifyListeners();
 
-      _autoStopTimer?.cancel();
-      _autoStopTimer = Timer(_autoRecordDuration, () async {
-        await stopRecording();
-      });
+      final recordingPath = await _recordingService.recordTimed(
+        fileNamePrefix: wordId,
+        duration: _autoRecordDuration,
+      );
+
+      if (attempt != _recordingAttempt) return;
+
+      isRecording = false;
+      hasMicPermission = _recordingService.hasMicPermission;
+      isRecorderReady = _recordingService.isRecorderReady;
+
+      if (recordingPath != null) {
+        _recordingsByWordId[wordId] = recordingPath;
+        final recordingSize = await File(recordingPath).length();
+        debugPrint(
+          '[screening] recording_saved word_id=$wordId '
+          'path=$recordingPath bytes=$recordingSize',
+        );
+        notifyListeners();
+
+        isProcessing = true;
+        notifyListeners();
+
+        debugPrint(
+          '[screening-api] immediate_assess_start word=${word.displayWord} '
+          'word_id=$wordId path=$recordingPath '
+          'base_url=${_assessmentService.baseUrl}',
+        );
+        final result = await _assessmentService.assess(
+          word: word,
+          recordingPath: recordingPath,
+        );
+
+        if (attempt != _recordingAttempt) return;
+
+        _assessmentResultsByWordId[wordId] = result;
+        if (result.isSuccess) {
+          final score = result.overallScore?.toStringAsFixed(2);
+          debugPrint(
+            '[screening-api] immediate_assess_success '
+            'word=${result.displayWord} word_id=${result.wordId} '
+            'score=$score expected=${result.expectedIpa} '
+            'detected=${result.detectedIpa} '
+            'process_count=${result.detectedProcesses.length} '
+            'processes=${result.detectedProcessSummary}',
+          );
+        } else {
+          debugPrint(
+            '[screening-api] immediate_assess_error '
+            'word=${result.displayWord} word_id=${result.wordId} '
+            'message=${result.error}',
+          );
+        }
+
+        isProcessing = false;
+      } else {
+        errorMessage =
+            'Recording was not saved as a valid WAV. Please try again.';
+        debugPrint('[screening] recording_failed word_id=$wordId');
+      }
+
+      notifyListeners();
     } catch (e) {
       isRecording = false;
       isProcessing = false;
-      _activeRecordingPath = null;
       errorMessage = 'Unable to start recording: $e';
+      debugPrint('[screening] record_error word_id=$wordId error=$e');
       notifyListeners();
     }
   }
@@ -186,14 +239,9 @@ class ScreeningController extends ChangeNotifier {
     if (!isRecording) return;
 
     try {
-      _autoStopTimer?.cancel();
-      _autoStopTimer = null;
-
-      _recorder.stopRecording();
-
+      final finalPath = await _recordingService.stopAndVerify();
       isRecording = false;
 
-      final finalPath = _activeRecordingPath;
       if (finalPath != null && finalPath.isNotEmpty) {
         final file = File(finalPath);
 
@@ -214,13 +262,9 @@ class ScreeningController extends ChangeNotifier {
         errorMessage = 'No recording was captured.';
       }
 
-      _activeRecordingPath = null;
       notifyListeners();
     } catch (e) {
-      _autoStopTimer?.cancel();
-      _autoStopTimer = null;
       isRecording = false;
-      _activeRecordingPath = null;
       errorMessage = 'Failed to stop recording: $e';
       notifyListeners();
     }
@@ -243,6 +287,7 @@ class ScreeningController extends ChangeNotifier {
       }
 
       _recordingsByWordId.remove(currentWord.id);
+      _assessmentResultsByWordId.remove(currentWord.id);
       errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -252,8 +297,25 @@ class ScreeningController extends ChangeNotifier {
   }
 
   Future<bool> goNext() async {
+    debugPrint(
+      '[screening] next_requested current=${currentWord.displayWord} '
+      'step=$currentStep/$totalSteps has_recording=$hasRecording '
+      'saved_recordings=${_recordingsByWordId.length} '
+      'model_results=${_assessmentResultsByWordId.length}',
+    );
+
     if (isRecording) {
       errorMessage = 'Please wait for the recording to finish.';
+      notifyListeners();
+      return false;
+    }
+
+    if (isProcessing) {
+      errorMessage = 'Please wait for the model result.';
+      debugPrint(
+        '[screening] next_blocked reason=model_processing '
+        'word=${currentWord.displayWord} word_id=${currentWord.id}',
+      );
       notifyListeners();
       return false;
     }
@@ -267,20 +329,28 @@ class ScreeningController extends ChangeNotifier {
     if (!isLastWord) {
       _currentIndex++;
       errorMessage = null;
+      debugPrint(
+        '[screening] moved_to_next step=$currentStep/$totalSteps '
+        'word=${currentWord.displayWord}',
+      );
       notifyListeners();
       return false;
     }
 
+    debugPrint(
+      '[screening] completed_all_words saved_recordings=${_recordingsByWordId.length} '
+      'model_results=${_assessmentResultsByWordId.length} '
+      'word_ids=${_recordingsByWordId.keys.join(',')}',
+    );
     return true;
   }
 
   Future<void> cancelAndClearAll() async {
     try {
-      _autoStopTimer?.cancel();
-      _autoStopTimer = null;
+      _recordingAttempt++;
 
       if (isRecording) {
-        _recorder.stopRecording();
+        await _recordingService.cancel();
       }
 
       await _player.stop();
@@ -291,18 +361,11 @@ class ScreeningController extends ChangeNotifier {
           await file.delete();
         }
       }
-
-      if (_activeRecordingPath != null) {
-        final activeFile = File(_activeRecordingPath!);
-        if (await activeFile.exists()) {
-          await activeFile.delete();
-        }
-      }
     } catch (_) {
       // ignore cleanup errors
     } finally {
       _recordingsByWordId.clear();
-      _activeRecordingPath = null;
+      _assessmentResultsByWordId.clear();
       _currentIndex = 0;
       isRecording = false;
       isPromptPlaying = false;
@@ -314,10 +377,10 @@ class ScreeningController extends ChangeNotifier {
 
   @override
   void dispose() {
-    _autoStopTimer?.cancel();
+    _recordingAttempt++;
     _playerStateSub?.cancel();
     _player.dispose();
-    _recorder.deinit();
+    unawaited(_recordingService.dispose());
     super.dispose();
   }
 }
