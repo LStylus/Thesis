@@ -6,7 +6,6 @@ import '../../controllers/home_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
 import '../../models/profile_model.dart';
-import '../../services/user_service.dart';
 import '../../widgets/profile_avatar.dart';
 import '../auth/child_info_page.dart';
 
@@ -26,12 +25,28 @@ class UserSelectPage extends StatefulWidget {
 
 class _UserSelectPageState extends State<UserSelectPage> {
   late String _selectedProfileId;
+  late List<ProfileModel> _profiles;
+  ProfileModel? _activeProfileAfterEdit;
   bool _isBusy = false;
+  bool _isEditing = false;
 
   @override
   void initState() {
     super.initState();
     _selectedProfileId = widget.activeProfile.profileId;
+    _profiles = _mergeProfiles(widget.profiles, widget.activeProfile);
+  }
+
+  List<ProfileModel> _mergeProfiles(
+    List<ProfileModel> profiles,
+    ProfileModel activeProfile,
+  ) {
+    final uniqueProfiles = <String, ProfileModel>{};
+    for (final profile in profiles) {
+      uniqueProfiles[profile.profileId] = profile;
+    }
+    uniqueProfiles.putIfAbsent(activeProfile.profileId, () => activeProfile);
+    return uniqueProfiles.values.toList();
   }
 
   Future<void> _addChild() async {
@@ -69,7 +84,7 @@ class _UserSelectPageState extends State<UserSelectPage> {
   }
 
   Future<void> _selectProfile(ProfileModel profile) async {
-    if (_isBusy) return;
+    if (_isBusy || _isEditing) return;
     setState(() {
       _isBusy = true;
       _selectedProfileId = profile.profileId;
@@ -92,6 +107,83 @@ class _UserSelectPageState extends State<UserSelectPage> {
     }
   }
 
+  Future<void> _deleteProfile(ProfileModel profile) async {
+    if (_isBusy) return;
+
+    final remainingProfiles = _profiles
+        .where((childProfile) => childProfile.profileId != profile.profileId)
+        .toList();
+    final messenger = ScaffoldMessenger.of(context);
+
+    if (remainingProfiles.isEmpty) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Add another child before deleting this profile.'),
+        ),
+      );
+      return;
+    }
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Delete child profile?'),
+          content: Text(
+            'This will remove ${profile.childName} from this guardian account.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldDelete != true || !mounted) return;
+
+    setState(() {
+      _isBusy = true;
+    });
+
+    try {
+      final replacement = await context
+          .read<HomeController>()
+          .deleteChildProfile(profile);
+      if (!mounted) return;
+
+      setState(() {
+        _profiles = remainingProfiles;
+        if (replacement != null) {
+          _selectedProfileId = replacement.profileId;
+          _activeProfileAfterEdit = replacement;
+        } else if (_selectedProfileId == profile.profileId) {
+          _selectedProfileId = remainingProfiles.first.profileId;
+          _activeProfileAfterEdit = remainingProfiles.first;
+        }
+        _isBusy = false;
+      });
+
+      messenger.showSnackBar(
+        SnackBar(content: Text('${profile.childName} was removed.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isBusy = false;
+      });
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Could not delete child profile.')),
+      );
+    }
+  }
+
   Future<void> _signOut() async {
     if (_isBusy) return;
     setState(() {
@@ -103,18 +195,13 @@ class _UserSelectPageState extends State<UserSelectPage> {
     await authController.signOut();
   }
 
+  void _close() {
+    Navigator.of(context).pop(_activeProfileAfterEdit);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final uniqueProfiles = <String, ProfileModel>{};
-    for (final profile in widget.profiles) {
-      uniqueProfiles[profile.profileId] = profile;
-    }
-    uniqueProfiles.putIfAbsent(
-      widget.activeProfile.profileId,
-      () => widget.activeProfile,
-    );
-
-    final orderedProfiles = uniqueProfiles.values.toList()
+    final orderedProfiles = _profiles.toList()
       ..sort((left, right) {
         final leftRank = left.profileId == _selectedProfileId ? 0 : 1;
         final rightRank = right.profileId == _selectedProfileId ? 0 : 1;
@@ -144,16 +231,24 @@ class _UserSelectPageState extends State<UserSelectPage> {
                       child: _SelectorIconButton(
                         icon: Icons.close_rounded,
                         label: 'Close',
-                        onTap: _isBusy ? null : () => Navigator.of(context).pop(),
+                        onTap: _isBusy ? null : _close,
                       ),
                     ),
                     Positioned(
                       right: 12,
                       top: 12,
                       child: _SelectorIconButton(
-                        icon: Icons.edit_rounded,
-                        label: 'Parent settings',
-                        onTap: _isBusy ? null : _signOut,
+                        icon: _isEditing
+                            ? Icons.check_rounded
+                            : Icons.edit_rounded,
+                        label: _isEditing ? 'Done editing' : 'Edit children',
+                        onTap: _isBusy
+                            ? null
+                            : () {
+                                setState(() {
+                                  _isEditing = !_isEditing;
+                                });
+                              },
                       ),
                     ),
                     Positioned.fill(
@@ -195,7 +290,10 @@ class _UserSelectPageState extends State<UserSelectPage> {
                                               profile.profileId ==
                                               _selectedProfileId,
                                           isEnabled: !_isBusy,
+                                          isEditing: _isEditing,
                                           onTap: () => _selectProfile(profile),
+                                          onDelete: () =>
+                                              _deleteProfile(profile),
                                         ),
                                         const SizedBox(width: 24),
                                       ],
@@ -209,18 +307,9 @@ class _UserSelectPageState extends State<UserSelectPage> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            StreamBuilder<ParentAccountInfo?>(
-                              stream: context
-                                  .read<HomeController>()
-                                  .parentAccountStream(),
-                              builder: (context, snapshot) {
-                                return _ParentSettingsButton(
-                                  parent: snapshot.data,
-                                  activeProfile: widget.activeProfile,
-                                  isEnabled: !_isBusy,
-                                  onTap: _signOut,
-                                );
-                              },
+                            _LogoutButton(
+                              isEnabled: !_isBusy,
+                              onTap: _signOut,
                             ),
                           ],
                         ),
@@ -274,53 +363,36 @@ class _SelectorIconButton extends StatelessWidget {
   }
 }
 
-class _ParentSettingsButton extends StatelessWidget {
-  final ParentAccountInfo? parent;
-  final ProfileModel activeProfile;
+class _LogoutButton extends StatelessWidget {
   final bool isEnabled;
   final VoidCallback onTap;
 
-  const _ParentSettingsButton({
-    required this.parent,
-    required this.activeProfile,
+  const _LogoutButton({
     required this.isEnabled,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final parentSeed = parent?.userId ?? activeProfile.parentName;
-    final parentAssetPath = parent?.profileAssetPath ?? '';
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: isEnabled ? onTap : null,
-        borderRadius: BorderRadius.circular(999),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ProfileAvatar(
-                assetPath: parentAssetPath,
-                fallbackSeed: parentSeed,
-                size: 24,
-                borderWidth: 0,
-                borderRadius: 6,
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                "Parent's Settings",
-                style: TextStyle(
-                  color: Color(0xFF6F6F6F),
-                  fontFamily: AppFonts.fredoka,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0,
-                ),
-              ),
-            ],
+    return Opacity(
+      opacity: isEnabled ? 1 : 0.55,
+      child: TextButton(
+        onPressed: isEnabled ? onTap : null,
+        style: TextButton.styleFrom(
+          foregroundColor: const Color(0xFFD73A3A),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: const Text(
+          'Logout',
+          style: TextStyle(
+            color: Color(0xFFD73A3A),
+            fontFamily: AppFonts.fredoka,
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            decoration: TextDecoration.underline,
+            letterSpacing: 0,
           ),
         ),
       ),
@@ -389,13 +461,17 @@ class _ProfileChoiceTile extends StatelessWidget {
   final ProfileModel profile;
   final bool isActive;
   final bool isEnabled;
+  final bool isEditing;
   final VoidCallback onTap;
+  final VoidCallback onDelete;
 
   const _ProfileChoiceTile({
     required this.profile,
     required this.isActive,
     required this.isEnabled,
+    required this.isEditing,
     required this.onTap,
+    required this.onDelete,
   });
 
   @override
@@ -404,7 +480,7 @@ class _ProfileChoiceTile extends StatelessWidget {
       opacity: isEnabled ? 1 : 0.72,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
-        onTap: isEnabled ? onTap : null,
+        onTap: isEnabled && !isEditing ? onTap : null,
         child: SizedBox(
           width: 78,
           child: Column(
@@ -437,6 +513,36 @@ class _ProfileChoiceTile extends StatelessWidget {
                           Icons.check_rounded,
                           color: Colors.white,
                           size: 12,
+                        ),
+                      ),
+                    ),
+                  if (isEditing)
+                    Positioned(
+                      right: -6,
+                      top: -6,
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: isEnabled ? onDelete : null,
+                        child: Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFF5A5A),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.14),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(
+                            Icons.close_rounded,
+                            color: Colors.white,
+                            size: 14,
+                          ),
                         ),
                       ),
                     ),

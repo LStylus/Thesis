@@ -5,7 +5,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
 
+import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
@@ -42,22 +44,17 @@ class _ScreeningAccuracyResultsPageState
   final List<Model2AssessmentResult> _results = [];
 
   bool _isRunning = true;
+  bool _isSavingProfile = false;
   int _processedCount = 0;
   String? _playingWordId;
+  String? _profileSaveError;
   int _playbackSession = 0;
 
   @override
   void initState() {
     super.initState();
-    _forceLandscape();
+    _forcePortrait();
     _runAssessments();
-  }
-
-  static Future<void> _forceLandscape() {
-    return SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
   }
 
   static Future<void> _forcePortrait() {
@@ -126,7 +123,6 @@ class _ScreeningAccuracyResultsPageState
       'detected_processes=${_detectedProcessesForPayload.length} '
       'result_file=$filePath',
     );
-    await _forcePortrait();
     if (!mounted) return;
 
     setState(() {
@@ -229,7 +225,42 @@ class _ScreeningAccuracyResultsPageState
     }
   }
 
-  void _goHome() {
+  Future<void> _discardAndGoHome() async {
+    await context.read<AuthController>().discardPendingProfile();
+    if (!mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthGate()),
+      (route) => false,
+    );
+  }
+
+  Future<void> _proceedToHome() async {
+    if (_isSavingProfile) return;
+
+    setState(() {
+      _isSavingProfile = true;
+      _profileSaveError = null;
+    });
+
+    final authController = context.read<AuthController>();
+    final saved = await authController.completeSignup();
+    if (!mounted) return;
+
+    if (!saved) {
+      setState(() {
+        _isSavingProfile = false;
+        _profileSaveError =
+            authController.errorMessage ?? 'Could not save profile data.';
+      });
+      return;
+    }
+
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    if (!mounted) return;
+
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthGate()),
       (route) => false,
@@ -239,7 +270,6 @@ class _ScreeningAccuracyResultsPageState
   @override
   void dispose() {
     _playbackSession++;
-    _forcePortrait();
     _player.dispose();
     super.dispose();
   }
@@ -258,7 +288,7 @@ class _ScreeningAccuracyResultsPageState
       showSandDecoration: false,
       topSpacing: AppSpacing.authTopSpacingCompact,
       bottomPadding: 28,
-      leading: OceanCloseButton(onPressed: _goHome),
+      leading: OceanCloseButton(onPressed: _discardAndGoHome),
       children: [
         const Text(
           'Screening Results',
@@ -283,7 +313,22 @@ class _ScreeningAccuracyResultsPageState
             ),
           ),
         const SizedBox(height: 22),
-        PrimaryButton(text: 'Proceed', onPressed: _goHome),
+        PrimaryButton(
+          text: 'Proceed',
+          onPressed: _isSavingProfile ? null : _proceedToHome,
+          isLoading: _isSavingProfile,
+        ),
+        if (_profileSaveError != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            _profileSaveError!,
+            textAlign: TextAlign.center,
+            style: AppTextStyles.helper.copyWith(
+              color: AppColors.error,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ],
     );
   }

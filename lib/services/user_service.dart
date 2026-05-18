@@ -70,6 +70,18 @@ class UserService {
     });
   }
 
+  Stream<bool> streamUserProfileReady(String uid) {
+    return _users.doc(uid).snapshots().asyncMap((userDoc) async {
+      final userData = userDoc.data();
+      if (_userDataHasProfile(userData)) return true;
+
+      final legacyProfileDoc = await _tryGetProfileDoc(uid);
+      final legacyProfileData = legacyProfileDoc?.data();
+      return legacyProfileData != null &&
+          _stringValue(legacyProfileData['childName']).isNotEmpty;
+    });
+  }
+
   Future<void> createUserAndProfile({
     required AppUserModel user,
     required ProfileModel profile,
@@ -209,6 +221,87 @@ class UserService {
     }, SetOptions(merge: true));
   }
 
+  Future<ProfileModel> deleteChildProfile({
+    required String userId,
+    required ProfileModel profile,
+  }) async {
+    final userRef = _users.doc(userId);
+    final userDoc = await userRef.get();
+    final userData = userDoc.data();
+    if (userData == null) {
+      throw StateError('User profile could not be found.');
+    }
+
+    final childSnapshot = await userRef.collection('children').get();
+    final profilesById = <String, ProfileModel>{};
+    for (final doc in childSnapshot.docs) {
+      final childProfile = ProfileModel.fromMap(doc.data());
+      profilesById[childProfile.profileId] = childProfile;
+    }
+
+    final missingProfileIds = _profileIdsForUserData(userData)
+        .where((profileId) => !profilesById.containsKey(profileId));
+    final missingProfiles = await _fetchProfilesByIds(missingProfileIds);
+    for (final childProfile in missingProfiles) {
+      profilesById[childProfile.profileId] = childProfile;
+    }
+
+    final legacyProfile = _profileFromUserData(userId, userData);
+    if (legacyProfile != null) {
+      profilesById.putIfAbsent(legacyProfile.profileId, () => legacyProfile);
+    }
+
+    profilesById.remove(profile.profileId);
+
+    if (profilesById.isEmpty) {
+      throw StateError('Add another child before deleting this profile.');
+    }
+
+    final remainingProfiles = profilesById.values.toList()
+      ..sort(
+        (left, right) => left.childName.toLowerCase().compareTo(
+          right.childName.toLowerCase(),
+        ),
+      );
+    final currentActiveProfileId = _stringValue(userData['activeProfileId']);
+    final activeProfile = remainingProfiles.firstWhere(
+      (childProfile) =>
+          childProfile.profileId == currentActiveProfileId &&
+          currentActiveProfileId != profile.profileId,
+      orElse: () => remainingProfiles.first,
+    );
+
+    final userUpdate = <String, dynamic>{
+      'activeProfileId': activeProfile.profileId,
+      'activeChildName': activeProfile.childName,
+      'activeChildBirthDate': Timestamp.fromDate(activeProfile.birthDate),
+      'activeChildAge': activeProfile.age,
+      'activeChildProfileAssetPath': activeProfile.profileAssetPath,
+      'childProfileIds': FieldValue.arrayRemove([profile.profileId]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+    if (profile.profileAssetPath.isNotEmpty) {
+      userUpdate['usedProfileAssets'] = FieldValue.arrayRemove([
+        profile.profileAssetPath,
+      ]);
+    }
+
+    final batch = _firestore.batch();
+    batch.delete(userRef.collection('children').doc(profile.profileId));
+    batch.set(userRef, userUpdate, SetOptions(merge: true));
+    await batch.commit();
+
+    try {
+      await _profiles.doc(profile.profileId).delete();
+    } on FirebaseException catch (error) {
+      if (error.code != 'permission-denied' && error.code != 'not-found') {
+        rethrow;
+      }
+    }
+
+    return activeProfile;
+  }
+
   Future<void> ensureProfileAssetsForUser(String uid) async {
     final userRef = _users.doc(uid);
     final userDoc = await userRef.get();
@@ -286,7 +379,7 @@ class UserService {
           profileAssetPath: resolvedAssetPath,
         );
         batch.set(_profiles.doc(profile.profileId), {
-          'profileAssetPath': resolvedAssetPath,
+          ...updatedProfile.toMap(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
         batch.set(
@@ -396,6 +489,16 @@ class UserService {
     return value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
   }
 
+  static bool _userDataHasProfile(Map<String, dynamic>? userData) {
+    if (userData == null) return false;
+
+    return userData['profileComplete'] == true ||
+        _stringValue(userData['activeProfileId']).isNotEmpty ||
+        _stringValue(userData['activeChildName']).isNotEmpty ||
+        _stringValue(userData['childName']).isNotEmpty ||
+        _stringList(userData['childProfileIds']).isNotEmpty;
+  }
+
   Future<ProfileModel?> _resolveActiveProfile(
     String uid,
     Map<String, dynamic>? userData,
@@ -409,8 +512,8 @@ class UserService {
     }.where((profileId) => profileId.isNotEmpty);
 
     for (final profileId in profileIds) {
-      final profileDoc = await _profiles.doc(profileId).get();
-      final profileData = profileDoc.data();
+      final profileDoc = await _tryGetProfileDoc(profileId);
+      final profileData = profileDoc?.data();
       if (profileData != null) {
         return ProfileModel.fromMap(profileData);
       }
@@ -434,8 +537,8 @@ class UserService {
     if (userData == null) return null;
 
     final childName = _firstString([
-      userData['childName'],
       userData['activeChildName'],
+      userData['childName'],
     ]);
     if (childName.isEmpty) return null;
 
@@ -453,12 +556,12 @@ class UserService {
       'uid': uid,
       'childName': childName,
       'birthDate':
+          userData['activeChildBirthDate'] ??
           userData['birthDate'] ??
-          userData['childBirthDate'] ??
-          userData['activeChildBirthDate'],
+          userData['childBirthDate'],
       'profileAssetPath': _firstString([
-        userData['profileAssetPath'],
         userData['activeChildProfileAssetPath'],
+        userData['profileAssetPath'],
       ]),
     });
   }
@@ -475,19 +578,26 @@ class UserService {
     final activeProfileId = _stringValue(userData?['activeProfileId']);
     final legacyProfileId = _stringValue(userData?['profileId']);
     return <String>{
-      ..._stringList(userData?['childProfileIds']),
       if (activeProfileId.isNotEmpty) activeProfileId,
+      ..._stringList(userData?['childProfileIds']),
       if (legacyProfileId.isNotEmpty) legacyProfileId,
     }.toList();
   }
 
-  Future<List<ProfileModel>> _fetchProfilesByIds(Iterable<String> profileIds) async {
+  Future<List<ProfileModel>> _fetchProfilesByIds(
+    Iterable<String> profileIds,
+  ) async {
     final ids = profileIds.where((profileId) => profileId.isNotEmpty).toList();
     if (ids.isEmpty) return const [];
 
-    final docs = await Future.wait(ids.map((profileId) => _profiles.doc(profileId).get()));
+    final docs = await Future.wait(
+      ids.map((profileId) async {
+        return _tryGetProfileDoc(profileId);
+      }),
+    );
     final profilesById = <String, ProfileModel>{};
     for (final doc in docs) {
+      if (doc == null) continue;
       final data = doc.data();
       if (data == null) continue;
       final profile = ProfileModel.fromMap(data);
@@ -498,6 +608,19 @@ class UserService {
         .map((profileId) => profilesById[profileId])
         .whereType<ProfileModel>()
         .toList();
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>?> _tryGetProfileDoc(
+    String profileId,
+  ) async {
+    try {
+      return await _profiles.doc(profileId).get();
+    } on FirebaseException catch (error) {
+      if (error.code == 'permission-denied') {
+        return null;
+      }
+      rethrow;
+    }
   }
 
   Future<Set<String>> _collectUsedProfileAssets(

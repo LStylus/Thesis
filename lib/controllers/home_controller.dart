@@ -36,6 +36,12 @@ class HomeController {
     await _userService.setActiveProfile(userId: user.uid, profile: profile);
   }
 
+  Future<ProfileModel?> deleteChildProfile(ProfileModel profile) async {
+    final user = _authService.currentUser;
+    if (user == null) return null;
+    return _userService.deleteChildProfile(userId: user.uid, profile: profile);
+  }
+
   Future<void> ensureCurrentUserProfileAssets() async {
     final user = _authService.currentUser;
     if (user == null) return;

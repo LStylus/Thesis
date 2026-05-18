@@ -23,6 +23,7 @@ class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -104,8 +105,24 @@ class _LoginPageState extends State<LoginPage> {
                   CustomTextField(
                     controller: _passwordController,
                     hintText: 'Password',
-                    obscureText: true,
+                    obscureText: _obscurePassword,
                     onChanged: (_) => authController.clearError(),
+                    suffixIcon: IconButton(
+                      tooltip: _obscurePassword
+                          ? 'Show password'
+                          : 'Hide password',
+                      onPressed: () {
+                        setState(() {
+                          _obscurePassword = !_obscurePassword;
+                        });
+                      },
+                      color: AppColors.borderGray,
+                      icon: Icon(
+                        _obscurePassword
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                      ),
+                    ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your password';

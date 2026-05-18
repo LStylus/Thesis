@@ -170,36 +170,21 @@ class AuthController extends ChangeNotifier {
     _setLoading(true);
 
     try {
-      final currentUser = _authService.currentUser;
-      final uid = currentUser?.uid ?? pendingUid;
+      final uid = _currentPendingUid();
+      if (uid == null) return false;
 
-      if (uid == null) {
-        errorMessage = 'Signup session expired. Please start again.';
-        return false;
-      }
+      final birthDate = await _validatedPendingChildBirthDate(uid);
+      if (birthDate == null) return false;
 
-      final birthDate = _draft.childBirthDate;
-      if (birthDate == null) {
-        errorMessage = 'Child birth date is required.';
-        return false;
-      }
-
-      final childNameAlreadyExists = await _userService.childNameExists(
-        userId: uid,
-        childName: _draft.childName,
-      );
-      if (childNameAlreadyExists) {
-        errorMessage =
-            'A child with this name already exists in this guardian account.';
-        return false;
-      }
-
-      final appUser = AppUserModel(userId: uid, email: _draft.email);
+      final email = _draft.email.isNotEmpty
+          ? _draft.email
+          : _authService.currentUser?.email ?? '';
+      final appUser = AppUserModel(userId: uid, email: email);
 
       final profile = ProfileModel(
         profileId: _userService.createProfileId(),
         userId: uid,
-        email: _draft.email,
+        email: email,
         progressId: '',
         birthDate: birthDate,
         categoryId: '',
@@ -223,7 +208,31 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<void> cancelPendingSignup() async {
+  Future<bool> validatePendingChildProfile() async {
+    errorMessage = null;
+    _setLoading(true);
+
+    try {
+      final uid = _currentPendingUid();
+      if (uid == null) return false;
+
+      final birthDate = await _validatedPendingChildBirthDate(uid);
+      return birthDate != null;
+    } catch (_) {
+      errorMessage = 'Could not verify profile data. Please try again.';
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> cancelPendingSignup() {
+    return discardPendingProfile(signOutExistingParent: true);
+  }
+
+  Future<void> discardPendingProfile({
+    bool signOutExistingParent = false,
+  }) async {
     _setLoading(true);
 
     try {
@@ -240,9 +249,12 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       debugPrint('Pending signup cleanup error: $e');
     } finally {
-      try {
-        await _authService.signOut();
-      } catch (_) {}
+      final shouldSignOut = !_isExistingParentSession || signOutExistingParent;
+      if (shouldSignOut) {
+        try {
+          await _authService.signOut();
+        } catch (_) {}
+      }
 
       _draft = SignupDraftModel();
       pendingUid = null;
@@ -296,6 +308,38 @@ class AuthController extends ChangeNotifier {
   void _setLoading(bool value) {
     isLoading = value;
     notifyListeners();
+  }
+
+  String? _currentPendingUid() {
+    final currentUser = _authService.currentUser;
+    final uid = currentUser?.uid ?? pendingUid;
+
+    if (uid == null) {
+      errorMessage = 'Signup session expired. Please start again.';
+      return null;
+    }
+
+    return uid;
+  }
+
+  Future<DateTime?> _validatedPendingChildBirthDate(String uid) async {
+    final birthDate = _draft.childBirthDate;
+    if (birthDate == null) {
+      errorMessage = 'Child birth date is required.';
+      return null;
+    }
+
+    final childNameAlreadyExists = await _userService.childNameExists(
+      userId: uid,
+      childName: _draft.childName,
+    );
+    if (childNameAlreadyExists) {
+      errorMessage =
+          'A child with this name already exists in this guardian account.';
+      return null;
+    }
+
+    return birthDate;
   }
 
   String _friendlySignupError(String code) {

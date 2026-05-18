@@ -33,7 +33,9 @@ class _HomePageState extends State<HomePage>
       DeviceOrientation.landscapeRight,
     ]);
     final homeController = context.read<HomeController>();
-    homeController.ensureCurrentUserProfileAssets();
+    homeController.ensureCurrentUserProfileAssets().catchError((error) {
+      debugPrint('Profile asset backfill failed: $error');
+    });
     _motionController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 14),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import '../../controllers/auth_controller.dart';
 import '../../controllers/screening_controller.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
@@ -26,7 +27,9 @@ class StartScreeningPage extends StatelessWidget {
     );
   }
 
-  void _goHome(BuildContext context) {
+  Future<void> _goHome(BuildContext context) async {
+    await context.read<AuthController>().discardPendingProfile();
+    if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthGate()),
       (route) => false,
@@ -177,6 +180,8 @@ class _ScreeningViewState extends State<_ScreeningView> {
 
   Future<void> _exitScreening(ScreeningController controller) async {
     await controller.cancelAndClearAll();
+    if (!mounted) return;
+    await context.read<AuthController>().discardPendingProfile();
     if (!mounted) return;
     setState(() {
       _allowPop = true;

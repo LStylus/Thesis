@@ -114,7 +114,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
       childBirthDate: _selectedDate,
     );
 
-    final ok = await authController.completeSignup();
+    final ok = await authController.validatePendingChildProfile();
     if (!mounted) return;
 
     if (ok) {

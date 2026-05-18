@@ -10,6 +10,7 @@ class CustomTextField extends StatelessWidget {
   final String? Function(String?)? validator;
   final void Function(String)? onChanged;
   final TextInputType? keyboardType;
+  final Widget? suffixIcon;
 
   const CustomTextField({
     super.key,
@@ -19,6 +20,7 @@ class CustomTextField extends StatelessWidget {
     this.validator,
     this.onChanged,
     this.keyboardType,
+    this.suffixIcon,
   });
 
   @override
@@ -30,7 +32,10 @@ class CustomTextField extends StatelessWidget {
       onChanged: onChanged,
       keyboardType: keyboardType,
       style: AppTextStyles.field,
-      decoration: OceanFormStyles.inputDecoration(hintText),
+      decoration: OceanFormStyles.inputDecoration(
+        hintText,
+        suffixIcon: suffixIcon,
+      ),
     );
   }
 }

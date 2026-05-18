@@ -26,6 +26,7 @@ class _SignupPageState extends State<SignupPage> {
 
   bool _allowPop = false;
   bool _isLeaving = false;
+  bool _obscurePassword = true;
 
   @override
   void initState() {
@@ -144,8 +145,24 @@ class _SignupPageState extends State<SignupPage> {
                     CustomTextField(
                       controller: _passwordController,
                       hintText: 'Password',
-                      obscureText: true,
+                      obscureText: _obscurePassword,
                       onChanged: (_) => authController.clearError(),
+                      suffixIcon: IconButton(
+                        tooltip: _obscurePassword
+                            ? 'Show password'
+                            : 'Hide password',
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                        color: AppColors.borderGray,
+                        icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                        ),
+                      ),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your password';
