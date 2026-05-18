@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/testing_defaults.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
@@ -101,12 +103,8 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
         }
       },
       child: OceanAuthScaffold(
-        topSpacing: 82,
-        leading: IconButton(
-          onPressed: _returnToSignup,
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
-          color: const Color(0xFFC3C3C3),
-        ),
+        topSpacing: AppSpacing.authTopSpacing,
+        leading: OceanBackButton(onPressed: _returnToSignup),
         children: [
           Form(
             key: _formKey,
@@ -117,13 +115,13 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                   textAlign: TextAlign.center,
                   style: OceanAuthTextStyles.title,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: AppSpacing.gapXs),
                 const Text(
                   'person completing the screening form',
                   textAlign: TextAlign.center,
                   style: OceanAuthTextStyles.subtitle,
                 ),
-                const SizedBox(height: 30),
+                const SizedBox(height: AppSpacing.gapXl),
                 CustomTextField(
                   controller: _nameController,
                   hintText: 'Name',
@@ -134,7 +132,7 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 11),
+                const SizedBox(height: AppSpacing.gapSm),
                 DropdownButtonFormField<String>(
                   initialValue: _selectedRelationship,
                   decoration: OceanFormStyles.inputDecoration(
@@ -150,10 +148,7 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                           value: value,
                           child: Text(
                             value,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.black87,
-                            ),
+                            style: AppTextStyles.field,
                           ),
                         ),
                       )
@@ -170,7 +165,7 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.gapMd),
                 PrimaryButton(
                   text: 'Next',
                   onPressed: () => _goNext(authController),

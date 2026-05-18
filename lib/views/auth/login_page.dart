@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_spacing.dart';
 import '../../core/constants/testing_defaults.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
@@ -67,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
     return Consumer<AuthController>(
       builder: (context, authController, _) {
         return OceanAuthScaffold(
-          topSpacing: 132,
+          topSpacing: AppSpacing.authTopSpacing,
           children: [
             Form(
               key: _formKey,
@@ -78,13 +79,13 @@ class _LoginPageState extends State<LoginPage> {
                     textAlign: TextAlign.center,
                     style: OceanAuthTextStyles.title,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.gapXs),
                   const Text(
                     'to continue your journey',
                     textAlign: TextAlign.center,
                     style: OceanAuthTextStyles.subtitle,
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: AppSpacing.gapXl),
                   CustomTextField(
                     controller: _emailController,
                     hintText: 'Email',
@@ -99,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 11),
+                  const SizedBox(height: AppSpacing.gapSm),
                   CustomTextField(
                     controller: _passwordController,
                     hintText: 'Password',
@@ -112,10 +113,12 @@ class _LoginPageState extends State<LoginPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.gapMd),
                   PrimaryButton(
                     text: 'Login',
-                    onPressed: () => _login(authController),
+                    onPressed: authController.isLoading
+                        ? null
+                        : () => _login(authController),
                     isLoading: authController.isLoading,
                   ),
                   if (authController.errorMessage != null) ...[
@@ -129,7 +132,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 26),
+                  const SizedBox(height: AppSpacing.gapLg),
                   RichText(
                     textAlign: TextAlign.center,
                     text: TextSpan(

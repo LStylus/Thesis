@@ -1,10 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
+import '../core/constants/app_assets.dart';
 import '../core/constants/app_colors.dart';
-import '../core/constants/app_fonts.dart';
+import '../core/constants/app_spacing.dart';
+import '../core/constants/app_text_styles.dart';
 
 class OceanAuthScaffold extends StatelessWidget {
   final List<Widget> children;
@@ -13,85 +16,131 @@ class OceanAuthScaffold extends StatelessWidget {
   final double mascotWidth;
   final double mascotHeight;
   final double bottomPadding;
+  final double sandBottomExtension;
   final Widget? leading;
+  final double horizontalPadding;
+  final bool showSandDecoration;
 
   const OceanAuthScaffold({
     super.key,
     required this.children,
-    this.topSpacing = 132,
+    this.topSpacing = AppSpacing.authTopSpacing,
     this.showMascot = true,
-    this.mascotWidth = 304,
-    this.mascotHeight = 170,
-    this.bottomPadding = 154,
+    this.mascotWidth = AppSpacing.mascotWidth,
+    this.mascotHeight = AppSpacing.mascotHeight,
+    this.bottomPadding = AppSpacing.bottomContentPadding,
+    this.sandBottomExtension = 0,
     this.leading,
+    this.horizontalPadding = AppSpacing.pageHorizontalPadding,
+    this.showSandDecoration = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      resizeToAvoidBottomInset: true,
-      body: Stack(
-        children: [
-          const Positioned.fill(child: ColoredBox(color: Colors.white)),
-          const Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 126,
-            child: IgnorePointer(child: CustomPaint(painter: _SandPainter())),
-          ),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxHeight < 720;
-              final effectiveTopSpacing = math.max(
-                40.0,
-                topSpacing * (isCompact ? 0.68 : 1.0),
-              );
+    final mediaQuery = MediaQuery.of(context);
+    final bottomSafeInset = math.max(
+      mediaQuery.viewPadding.bottom,
+      mediaQuery.padding.bottom,
+    );
+    final bottomFillHeight = showSandDecoration
+        ? AppSpacing.sandHeight + sandBottomExtension + bottomSafeInset
+        : 0.0;
+    final overlayStyle = SystemUiOverlayStyle(
+      statusBarColor: Colors.white,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+      systemNavigationBarColor: showSandDecoration
+          ? AppColors.sand
+          : Colors.white,
+      systemNavigationBarDividerColor: showSandDecoration
+          ? AppColors.sand
+          : Colors.white,
+      systemNavigationBarIconBrightness: Brightness.dark,
+      systemNavigationBarContrastEnforced: false,
+    );
 
-              return SafeArea(
-                child: LayoutBuilder(
-                  builder: (context, safeConstraints) {
-                    final contentWidth = math.min(
-                      math.max(0.0, safeConstraints.maxWidth - 56),
-                      356.0,
-                    );
+    SystemChrome.setSystemUIOverlayStyle(overlayStyle);
 
-                    return SingleChildScrollView(
-                      padding: EdgeInsets.fromLTRB(28, 0, 28, bottomPadding),
-                      child: Align(
-                        alignment: Alignment.topCenter,
-                        child: SizedBox(
-                          width: contentWidth,
-                          child: Column(
-                            children: [
-                              SizedBox(height: effectiveTopSpacing),
-                              if (showMascot) ...[
-                                FigmaWhaleMascot(
-                                  width: mascotWidth,
-                                  height: mascotHeight,
-                                ),
-                                const SizedBox(height: 16),
-                              ],
-                              ...children,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: overlayStyle,
+      child: Scaffold(
+        backgroundColor: showSandDecoration ? AppColors.sand : Colors.white,
+        resizeToAvoidBottomInset: false,
+        body: Stack(
+          children: [
+            const Positioned.fill(child: ColoredBox(color: Colors.white)),
+            if (showSandDecoration)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                height: bottomFillHeight,
+                child: const BottomSandDecoration(),
+              ),
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, safeConstraints) {
+                  final isCompactHeight = safeConstraints.maxHeight < 700;
+                  final isNarrow = safeConstraints.maxWidth < 360;
+                  final effectiveTopSpacing = math.max(
+                    34.0,
+                    topSpacing * (isCompactHeight ? 0.72 : 1.0),
+                  );
+                  final effectiveHorizontalPadding = isNarrow
+                      ? AppSpacing.compactPageHorizontalPadding
+                      : horizontalPadding;
+                  final contentWidth = math.min(
+                    math.max(
+                      0.0,
+                      safeConstraints.maxWidth -
+                          (effectiveHorizontalPadding * 2),
+                    ),
+                    AppSpacing.contentMaxWidth,
+                  );
+                  final keyboardInset = mediaQuery.viewInsets.bottom;
+                  final effectiveBottomPadding =
+                      bottomPadding + bottomSafeInset + keyboardInset;
+
+                  return SingleChildScrollView(
+                    physics: const ClampingScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      effectiveHorizontalPadding,
+                      0,
+                      effectiveHorizontalPadding,
+                      effectiveBottomPadding,
+                    ),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: SizedBox(
+                        width: contentWidth,
+                        child: Column(
+                          children: [
+                            SizedBox(height: effectiveTopSpacing),
+                            if (showMascot) ...[
+                              FigmaWhaleMascot(
+                                width: mascotWidth,
+                                height: mascotHeight,
+                              ),
+                              const SizedBox(height: AppSpacing.gapMd),
                             ],
-                          ),
+                            ...children,
+                          ],
                         ),
                       ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-          if (leading != null)
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 12, top: 10),
-                child: leading,
+                    ),
+                  );
+                },
               ),
             ),
-        ],
+            if (leading != null)
+              SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 12, top: 10),
+                  child: leading,
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -101,7 +150,11 @@ class FigmaWhaleMascot extends StatelessWidget {
   final double width;
   final double height;
 
-  const FigmaWhaleMascot({super.key, this.width = 304, this.height = 170});
+  const FigmaWhaleMascot({
+    super.key,
+    this.width = AppSpacing.mascotWidth,
+    this.height = AppSpacing.mascotHeight,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +162,7 @@ class FigmaWhaleMascot extends StatelessWidget {
       width: width,
       height: height,
       child: SvgPicture.asset(
-        'assets/characters/whale.svg',
+        AppAssets.whaleMascot,
         fit: BoxFit.contain,
         semanticsLabel: 'Voice Voyage whale mascot',
       ),
@@ -117,33 +170,62 @@ class FigmaWhaleMascot extends StatelessWidget {
   }
 }
 
+class OceanBackButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const OceanBackButton({super.key, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Back',
+      button: true,
+      child: IconButton(
+        onPressed: onPressed,
+        icon: const Icon(Icons.arrow_back_ios_new_rounded),
+        color: const Color(0xFFC3C3C3),
+        iconSize: 26,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 48, height: 48),
+      ),
+    );
+  }
+}
+
+class OceanCloseButton extends StatelessWidget {
+  final VoidCallback onPressed;
+
+  const OceanCloseButton({super.key, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Close',
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: Container(
+          width: 32,
+          height: 32,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFFD7D7D7),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+        ),
+      ),
+    );
+  }
+}
+
 class OceanAuthTextStyles {
-  static const TextStyle title = TextStyle(
-    color: AppColors.primary,
-    fontFamily: AppFonts.fredokaOne,
-    fontSize: 32,
-    fontWeight: FontWeight.w400,
-    height: 1.22,
-    letterSpacing: 0,
-  );
+  static const TextStyle title = AppTextStyles.pageTitle;
 
-  static const TextStyle subtitle = TextStyle(
-    color: AppColors.textGray,
-    fontFamily: AppFonts.fredoka,
-    fontSize: 16,
-    fontWeight: FontWeight.w400,
-    height: 1.2,
-    letterSpacing: 0,
-  );
+  static const TextStyle subtitle = AppTextStyles.subtitle;
 
-  static const TextStyle link = TextStyle(
-    color: AppColors.textGray,
-    fontFamily: AppFonts.fredoka,
-    fontSize: 14,
-    fontWeight: FontWeight.w600,
-    decoration: TextDecoration.underline,
-    letterSpacing: 0,
-  );
+  static const TextStyle link = AppTextStyles.link;
 }
 
 class OceanFormStyles {
@@ -156,14 +238,9 @@ class OceanFormStyles {
       suffixIcon: suffixIcon,
       filled: true,
       fillColor: Colors.white,
+      constraints: const BoxConstraints(minHeight: AppSpacing.fieldHeight),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 21),
-      hintStyle: const TextStyle(
-        color: AppColors.textGray,
-        fontFamily: AppFonts.fredoka,
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0,
-      ),
+      hintStyle: AppTextStyles.fieldHint,
       border: _border(AppColors.borderGray),
       enabledBorder: _border(AppColors.borderGray),
       focusedBorder: _border(AppColors.primary, width: 1.4),
@@ -174,8 +251,21 @@ class OceanFormStyles {
 
   static OutlineInputBorder _border(Color color, {double width = 1}) {
     return OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(AppSpacing.fieldRadius),
       borderSide: BorderSide(color: color, width: width),
+    );
+  }
+}
+
+class BottomSandDecoration extends StatelessWidget {
+  const BottomSandDecoration({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox.expand(
+      child: IgnorePointer(
+        child: CustomPaint(painter: _SandPainter()),
+      ),
     );
   }
 }
@@ -187,7 +277,7 @@ class _SandPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..isAntiAlias = true;
 
-    paint.color = const Color(0xFFFFE891);
+    paint.color = AppColors.sand;
     final sand = Path()
       ..moveTo(0, size.height * 0.35)
       ..cubicTo(
@@ -203,7 +293,7 @@ class _SandPainter extends CustomPainter {
       ..close();
     canvas.drawPath(sand, paint);
 
-    paint.color = const Color(0xFFF6D765);
+    paint.color = AppColors.sandAccent;
     canvas.save();
     canvas.translate(size.width * 0.1, size.height * 0.82);
     canvas.rotate(0.2);
@@ -216,7 +306,7 @@ class _SandPainter extends CustomPainter {
     canvas.drawOval(const Rect.fromLTWH(-26, -10, 52, 20), paint);
     canvas.restore();
 
-    paint.color = const Color(0xFFFF8658);
+    paint.color = AppColors.coral;
     final star = Path();
     final center = Offset(size.width * 0.91, size.height * 0.72);
     const outer = 31.0;

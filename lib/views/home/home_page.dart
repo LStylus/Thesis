@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/home_controller.dart';
@@ -10,6 +11,7 @@ import '../../core/constants/app_fonts.dart';
 import '../../models/profile_model.dart';
 import '../../screens/gameplay/gameplay_screen.dart';
 import '../../widgets/profile_avatar.dart';
+import 'learning_report_page.dart';
 import 'user_select_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -96,7 +98,6 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
 
   late final ScrollController _scrollController;
   final Set<int> _completedIslandOneLevels = {};
-  final Map<int, int> _islandOneAccuracyByLevel = {};
   ProfileModel? _selectedProfileOverride;
   int _currentIsland = 0;
   int _unlockedIslandOneLevels = 1;
@@ -105,24 +106,17 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
 
   List<_QuestProgress> get _quests {
     final completedCount = _completedIslandOneLevels.length;
-    final averageScore = _islandOneAccuracyByLevel.isEmpty
-        ? 0
-        : (_islandOneAccuracyByLevel.values.reduce((a, b) => a + b) /
-                  _islandOneAccuracyByLevel.length)
-              .round();
 
     return [
       _QuestProgress(
-        title: 'Speech Quest 1 : Sounds',
+        title: 'Activity 1: The Sound Pop!',
         levelsDone: completedCount,
         totalLevels: _islandOneTotalLevels,
-        score: averageScore,
       ),
       const _QuestProgress(
-        title: 'Speech Quest 2 : Practice',
+        title: 'Activity 2: Word Splash!',
         levelsDone: 0,
         totalLevels: 4,
-        score: 0,
       ),
     ];
   }
@@ -174,7 +168,6 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
 
   void _resetLocalProgress() {
     _completedIslandOneLevels.clear();
-    _islandOneAccuracyByLevel.clear();
     _currentIsland = 0;
     _unlockedIslandOneLevels = 1;
   }
@@ -200,16 +193,28 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
     });
   }
 
-  void _showProgressSummary() {
+  LearningReportMetrics get _reportMetrics {
+    final completedLevels = _completedIslandOneLevels.length;
+
+    return LearningReportMetrics(
+      activities: _quests.length,
+      minutes: completedLevels == 0 ? 10 : completedLevels * 5,
+      words: completedLevels == 0 ? 4 : completedLevels,
+      levels: completedLevels == 0 ? 6 : completedLevels,
+    );
+  }
+
+  Future<void> _openLearningReport() {
     final activeProfile = _activeProfile;
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return _QuestSummaryDialog(
-          childName: activeProfile.childName,
-          quests: _quests,
-        );
-      },
+
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => LearningReportPage(
+          profile: activeProfile,
+          thisWeek: _reportMetrics,
+          overall: _reportMetrics,
+        ),
+      ),
     );
   }
 
@@ -230,7 +235,6 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
 
     setState(() {
       _completedIslandOneLevels.add(result.levelIndex);
-      _islandOneAccuracyByLevel[result.levelIndex] = result.accuracy;
       _unlockedIslandOneLevels = math.min(
         _islandOneTotalLevels,
         math.max(_unlockedIslandOneLevels, result.levelIndex + 2),
@@ -246,7 +250,7 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final compact = constraints.maxWidth < 720;
-        final titleTop = padding.top + (compact ? 76.0 : 14.0);
+        final titleTop = padding.top + (compact ? 76.0 : 26.0);
         final currentQuest = _quests[_currentIsland];
 
         return Stack(
@@ -259,8 +263,8 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
               onStartGameplay: _openGameplayLevel,
             ),
             Positioned(
-              top: padding.top + 12,
-              left: 14,
+              top: padding.top + (compact ? 18 : 30),
+              left: compact ? 18 : 40,
               child: StreamBuilder<List<ProfileModel>>(
                 stream: context.read<HomeController>().childProfilesStream(),
                 builder: (context, snapshot) {
@@ -276,16 +280,39 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
             ),
             Positioned(
               top: titleTop,
-              left: compact ? 84 : 230,
-              right: compact ? 84 : 230,
+              left: compact ? 92 : 0,
+              right: compact ? 92 : 0,
               child: _LessonTitle(title: currentQuest.title),
             ),
             Positioned(
-              top: padding.top + 12,
-              right: 14,
+              top: padding.top + (compact ? 18 : 30),
+              right: compact ? 18 : 58,
               child: _ProgressBadge(
                 quest: currentQuest,
-                onTap: _showProgressSummary,
+                activityNumber: _currentIsland + 1,
+                activityCount: _quests.length,
+                onTap: _openLearningReport,
+              ),
+            ),
+            Positioned(
+              left: compact ? 18 : 40,
+              bottom: padding.bottom + 24,
+              child: _MapIconButton(
+                assetPath: 'assets/icons/learning_report_button.svg',
+                label: 'Learning report',
+                width: 50,
+                height: 50,
+                onTap: _openLearningReport,
+              ),
+            ),
+            Positioned(
+              right: compact ? 18 : 58,
+              bottom: padding.bottom + 24,
+              child: const _MapIconButton(
+                assetPath: 'assets/icons/customize_button.svg',
+                label: 'Customize',
+                width: 63,
+                height: 73,
               ),
             ),
           ],
@@ -388,134 +415,6 @@ class _ScrollableOceanMap extends StatelessWidget {
                             ),
                           ),
                         ),
-                        _SeaweedProp(
-                          animation: animation,
-                          asset: 'assets/props/seaweed_13.png',
-                          left: x(64),
-                          top: y(400),
-                          width: 21,
-                          phase: 0.1,
-                        ),
-                        _SeaweedProp(
-                          animation: animation,
-                          asset: 'assets/props/seaweed_14.png',
-                          left: x(252),
-                          top: y(132),
-                          width: 20,
-                          phase: 0.45,
-                        ),
-                        _SeaweedProp(
-                          animation: animation,
-                          asset: 'assets/props/seaweed_16.png',
-                          left: x(534),
-                          top: y(88),
-                          width: 19,
-                          phase: 0.7,
-                        ),
-                        _SeaweedProp(
-                          animation: animation,
-                          asset: 'assets/props/seaweed_15.png',
-                          left: x(944),
-                          top: y(360),
-                          width: 21,
-                          phase: 0.24,
-                        ),
-                        _SeaweedProp(
-                          animation: animation,
-                          asset: 'assets/props/seaweed_17.png',
-                          left: x(1088),
-                          top: y(188),
-                          width: 20,
-                          phase: 0.62,
-                        ),
-                        _SeaweedProp(
-                          animation: animation,
-                          asset: 'assets/props/seaweed_10.png',
-                          left: x(1148),
-                          top: y(406),
-                          width: 19,
-                          phase: 0.88,
-                        ),
-                        _SeaweedProp(
-                          animation: animation,
-                          asset: 'assets/props/seaweed_11.png',
-                          left: x(1600),
-                          top: y(328),
-                          width: 19,
-                          phase: 0.3,
-                        ),
-                        _SeaweedProp(
-                          animation: animation,
-                          asset: 'assets/props/seaweed_12.png',
-                          left: x(2026),
-                          top: y(400),
-                          width: 20,
-                          phase: 0.54,
-                        ),
-                        _CoralProp(
-                          animation: animation,
-                          asset: 'assets/props/coral_01.png',
-                          left: x(172),
-                          top: y(376),
-                          width: 26,
-                          phase: 0.15,
-                        ),
-                        _CoralProp(
-                          animation: animation,
-                          asset: 'assets/props/coral_02.png',
-                          left: x(324),
-                          top: y(420),
-                          width: 24,
-                          phase: 0.42,
-                        ),
-                        _CoralProp(
-                          animation: animation,
-                          asset: 'assets/props/coral_27.png',
-                          left: x(720),
-                          top: y(96),
-                          width: 25,
-                          phase: 0.72,
-                        ),
-                        _CoralProp(
-                          animation: animation,
-                          asset: 'assets/props/coral_29.png',
-                          left: x(998),
-                          top: y(396),
-                          width: 26,
-                          phase: 0.25,
-                        ),
-                        _CoralProp(
-                          animation: animation,
-                          asset: 'assets/props/coral_04.png',
-                          left: x(1208),
-                          top: y(398),
-                          width: 25,
-                          phase: 0.58,
-                        ),
-                        _CoralProp(
-                          animation: animation,
-                          asset: 'assets/props/coral_26.png',
-                          left: x(1466),
-                          top: y(416),
-                          width: 25,
-                          phase: 0.82,
-                        ),
-                        _CoralProp(
-                          animation: animation,
-                          asset: 'assets/props/coral_28.png',
-                          left: x(1832),
-                          top: y(386),
-                          width: 25,
-                          phase: 0.33,
-                        ),
-                        _CoralProp(
-                          animation: animation,
-                          asset: 'assets/props/coral_30.png',
-                          left: x(2068),
-                          top: y(128),
-                          width: 26,
-                          phase: 0.66,
-                        ),
                         _LessonSandNode(
                           animation: animation,
                           left: x(250),
@@ -591,6 +490,7 @@ class _ScrollableOceanMap extends StatelessWidget {
                           top: y(241),
                           size: s(65),
                           locked: true,
+                          showStar: true,
                         ),
                       ],
                     ),
@@ -614,16 +514,16 @@ class _ProfileChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 58,
-      constraints: const BoxConstraints(minWidth: 168, maxWidth: 220),
+      width: 124,
+      height: 48,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(28),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -631,44 +531,32 @@ class _ProfileChip extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(28),
+          borderRadius: BorderRadius.circular(24),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(7, 7, 12, 7),
+            padding: const EdgeInsets.fromLTRB(4, 4, 10, 4),
             child: Row(
               children: [
                 ProfileAvatar(
                   assetPath: profile.profileAssetPath,
                   fallbackSeed: profile.profileId,
-                  size: 44,
-                  borderWidth: 2,
+                  size: 40,
+                  borderWidth: 1.5,
+                  borderRadius: 20,
                   borderColor: Colors.white,
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.12),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'User Select',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.primary,
-                          fontFamily: AppFonts.fredokaOne,
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
                       Text(
                         profile.childName,
                         maxLines: 1,
@@ -676,18 +564,37 @@ class _ProfileChip extends StatelessWidget {
                         style: const TextStyle(
                           color: Color(0xFF4B4B4B),
                           fontFamily: AppFonts.fredoka,
-                          fontSize: 13,
+                          fontSize: 11,
                           fontWeight: FontWeight.w700,
+                          height: 1.05,
                           letterSpacing: 0,
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.star_rounded,
+                            color: Color(0xFFFFC400),
+                            size: 13,
+                          ),
+                          SizedBox(width: 1),
+                          Text(
+                            '500',
+                            style: TextStyle(
+                              color: Color(0xFFFFC400),
+                              fontFamily: AppFonts.fredokaOne,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w400,
+                              height: 1,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                ),
-                const Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  color: AppColors.textGray,
-                  size: 22,
                 ),
               ],
             ),
@@ -707,11 +614,13 @@ class _LessonTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 330),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        width: 248,
+        height: 50,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 18),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.94),
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.1),
@@ -726,9 +635,11 @@ class _LessonTitle extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Color(0xFF9557F4),
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
+              color: AppColors.primary,
+              fontFamily: AppFonts.fredokaOne,
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0,
             ),
           ),
         ),
@@ -741,137 +652,95 @@ class _QuestProgress {
   final String title;
   final int levelsDone;
   final int totalLevels;
-  final int score;
 
   const _QuestProgress({
     required this.title,
     required this.levelsDone,
     required this.totalLevels,
-    required this.score,
   });
-
-  double get completion => totalLevels == 0 ? 0 : levelsDone / totalLevels;
 }
 
 class _ProgressBadge extends StatelessWidget {
   final _QuestProgress quest;
+  final int activityNumber;
+  final int activityCount;
   final VoidCallback onTap;
 
-  const _ProgressBadge({required this.quest, required this.onTap});
+  const _ProgressBadge({
+    required this.quest,
+    required this.activityNumber,
+    required this.activityCount,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white.withValues(alpha: 0.95),
-      borderRadius: BorderRadius.circular(22),
-      elevation: 6,
-      shadowColor: Colors.black.withValues(alpha: 0.12),
-      child: InkWell(
+    final currentActivity = activityNumber.clamp(1, activityCount);
+
+    return Semantics(
+      label:
+          '${quest.title} progress $currentActivity of $activityCount activities',
+      button: true,
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(22),
         child: Container(
-          width: 104,
-          height: 52,
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+          width: 63,
+          height: 73,
+          padding: const EdgeInsets.fromLTRB(6, 6, 6, 7),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(10),
+              topRight: Radius.circular(10),
+              bottomLeft: Radius.circular(22),
+              bottomRight: Radius.circular(22),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
                 'Progress',
+                maxLines: 1,
                 style: TextStyle(
-                  color: Color(0xFF9557F4),
-                  fontSize: 10.5,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 4),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(999),
-                child: LinearProgressIndicator(
-                  minHeight: 7,
-                  value: quest.completion,
-                  backgroundColor: const Color(0xFFE8DAFF),
-                  color: const Color(0xFF9557F4),
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                '${quest.levelsDone}/${quest.totalLevels} levels',
-                style: const TextStyle(
-                  color: Color(0xFF6F4ACB),
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                  fontFamily: AppFonts.fredokaOne,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w400,
                   height: 1,
+                  letterSpacing: 0,
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuestSummaryDialog extends StatelessWidget {
-  final String childName;
-  final List<_QuestProgress> quests;
-
-  const _QuestSummaryDialog({required this.childName, required this.quests});
-
-  int get totalScore {
-    if (quests.isEmpty) return 0;
-    final sum = quests.fold<int>(0, (total, quest) => total + quest.score);
-    return (sum / quests.length).round();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '$childName summary',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Color(0xFF4B4B4B),
-                        fontSize: 17,
-                        fontWeight: FontWeight.w900,
-                      ),
+              const SizedBox(height: 5),
+              Expanded(
+                child: Container(
+                  width: 43,
+                  height: 43,
+                  alignment: Alignment.center,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '$currentActivity/$activityCount\nActivity',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontFamily: AppFonts.fredokaOne,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w400,
+                      height: 0.95,
+                      letterSpacing: 0,
                     ),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(Icons.close_rounded),
-                    color: AppColors.textGray,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Overall score: $totalScore',
-                style: const TextStyle(
-                  color: Color(0xFF9557F4),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 14),
-              for (final quest in quests) ...[
-                _QuestSummaryRow(quest: quest),
-                if (quest != quests.last) const SizedBox(height: 10),
-              ],
             ],
           ),
         ),
@@ -880,61 +749,35 @@ class _QuestSummaryDialog extends StatelessWidget {
   }
 }
 
-class _QuestSummaryRow extends StatelessWidget {
-  final _QuestProgress quest;
+class _MapIconButton extends StatelessWidget {
+  final String assetPath;
+  final String label;
+  final double width;
+  final double height;
+  final VoidCallback? onTap;
 
-  const _QuestSummaryRow({required this.quest});
+  const _MapIconButton({
+    required this.assetPath,
+    required this.label,
+    required this.width,
+    required this.height,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF7F2FF),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            quest.title,
-            style: const TextStyle(
-              color: Color(0xFF4B4B4B),
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            minHeight: 8,
-            value: quest.completion,
-            backgroundColor: const Color(0xFFE8DAFF),
-            color: const Color(0xFF9557F4),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '${quest.levelsDone}/${quest.totalLevels} levels done',
-                style: const TextStyle(
-                  color: AppColors.textGray,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              Text(
-                'Score ${quest.score}',
-                style: const TextStyle(
-                  color: Color(0xFF6F4ACB),
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ],
-          ),
-        ],
+    return Semantics(
+      label: label,
+      button: true,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: SvgPicture.asset(
+          assetPath,
+          width: width,
+          height: height,
+          fit: BoxFit.contain,
+        ),
       ),
     );
   }
@@ -948,6 +791,7 @@ class _LessonSandNode extends StatelessWidget {
   final bool active;
   final bool locked;
   final bool completed;
+  final bool showStar;
   final VoidCallback? onTap;
 
   const _LessonSandNode({
@@ -958,6 +802,7 @@ class _LessonSandNode extends StatelessWidget {
     this.active = false,
     this.locked = false,
     this.completed = false,
+    this.showStar = false,
     this.onTap,
   });
 
@@ -984,13 +829,26 @@ class _LessonSandNode extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                if (active)
+                if (active && !showStar && !locked)
                   Image.asset(
-                    'assets/props/play_button.png',
+                    'assets/icons/play_button.png',
                     width: size * 0.72,
                     height: size * 0.72,
                     fit: BoxFit.contain,
                     filterQuality: FilterQuality.medium,
+                  ),
+                if (showStar)
+                  Icon(
+                    Icons.star_rounded,
+                    color: const Color(0xFFFFC400),
+                    size: size * 0.9,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withValues(alpha: 0.14),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                 if (completed)
                   Positioned(
@@ -1011,7 +869,7 @@ class _LessonSandNode extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (locked)
+                if (locked && !showStar)
                   Container(
                     width: size * 0.74,
                     height: size * 0.74,
@@ -1032,107 +890,37 @@ class _LessonSandNode extends StatelessWidget {
                       size: size * 0.4,
                     ),
                   ),
+                if (locked && showStar)
+                  Positioned(
+                    right: size * 0.06,
+                    bottom: size * 0.08,
+                    child: Container(
+                      width: size * 0.28,
+                      height: size * 0.28,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFFFFC400),
+                          width: 1.5,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.16),
+                            blurRadius: 3,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        Icons.lock_rounded,
+                        color: const Color(0xFFFFC400),
+                        size: size * 0.17,
+                      ),
+                    ),
+                  ),
               ],
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SeaweedProp extends StatelessWidget {
-  final Animation<double> animation;
-  final String asset;
-  final double left;
-  final double? top;
-  final double? bottom;
-  final double width;
-  final double phase;
-
-  const _SeaweedProp({
-    required this.animation,
-    required this.asset,
-    required this.left,
-    this.top,
-    this.bottom,
-    required this.width,
-    required this.phase,
-  }) : assert(top != null || bottom != null);
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: left,
-      top: top,
-      bottom: bottom,
-      child: AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          final sway = math.sin((animation.value + phase) * math.pi * 2);
-          return Transform.rotate(
-            angle: sway * 0.035,
-            alignment: Alignment.bottomCenter,
-            child: Transform.translate(
-              offset: Offset(sway * 2.8, 0),
-              child: child,
-            ),
-          );
-        },
-        child: IgnorePointer(
-          child: Image.asset(
-            asset,
-            width: width,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.medium,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CoralProp extends StatelessWidget {
-  final Animation<double> animation;
-  final String asset;
-  final double left;
-  final double top;
-  final double width;
-  final double phase;
-
-  const _CoralProp({
-    required this.animation,
-    required this.asset,
-    required this.left,
-    required this.top,
-    required this.width,
-    required this.phase,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: left,
-      top: top,
-      child: AnimatedBuilder(
-        animation: animation,
-        builder: (context, child) {
-          final bob = math.sin((animation.value + phase) * math.pi * 2);
-          return Transform.translate(
-            offset: Offset(0, bob * 1.6),
-            child: Transform.rotate(
-              angle: bob * 0.012,
-              alignment: Alignment.bottomCenter,
-              child: child,
-            ),
-          );
-        },
-        child: IgnorePointer(
-          child: Image.asset(
-            asset,
-            width: width,
-            fit: BoxFit.contain,
-            filterQuality: FilterQuality.medium,
           ),
         ),
       ),

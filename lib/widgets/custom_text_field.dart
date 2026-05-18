@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_fonts.dart';
+import '../core/constants/app_text_styles.dart';
 import 'ocean_auth_scaffold.dart';
 
 class CustomTextField extends StatelessWidget {
@@ -29,13 +29,7 @@ class CustomTextField extends StatelessWidget {
       validator: validator,
       onChanged: onChanged,
       keyboardType: keyboardType,
-      style: const TextStyle(
-        fontFamily: AppFonts.fredoka,
-        fontSize: 16,
-        color: Colors.black87,
-        fontWeight: FontWeight.w500,
-        letterSpacing: 0,
-      ),
+      style: AppTextStyles.field,
       decoration: OceanFormStyles.inputDecoration(hintText),
     );
   }

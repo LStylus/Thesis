@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
+import '../../core/constants/app_spacing.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
 import 'child_info_page.dart';
@@ -67,12 +68,8 @@ class _ExistingParentConfirmationPageState
             }
           },
           child: OceanAuthScaffold(
-            topSpacing: 88,
-            leading: IconButton(
-              onPressed: _returnToSignup,
-              icon: const Icon(Icons.arrow_back_ios_new_rounded),
-              color: const Color(0xFFC3C3C3),
-            ),
+            topSpacing: AppSpacing.authTopSpacing,
+            leading: OceanBackButton(onPressed: _returnToSignup),
             children: [
               const Text(
                 'Continue with',
@@ -95,7 +92,7 @@ class _ExistingParentConfirmationPageState
                   ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.gapXs),
               Text(
                 relationship.isEmpty
                     ? 'guardian account already found'
@@ -103,15 +100,15 @@ class _ExistingParentConfirmationPageState
                 textAlign: TextAlign.center,
                 style: OceanAuthTextStyles.subtitle,
               ),
-              const SizedBox(height: 30),
+              const SizedBox(height: AppSpacing.gapXl),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFFBFF),
-                  borderRadius: BorderRadius.circular(8),
+                  color: AppColors.infoBackground,
+                  borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
                   border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.18),
+                    color: AppColors.infoBorder,
                   ),
                 ),
                 child: const Text(
@@ -127,7 +124,7 @@ class _ExistingParentConfirmationPageState
                   ),
                 ),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 34),
               PrimaryButton(
                 text: 'Continue',
                 onPressed: authController.isLoading
@@ -135,7 +132,7 @@ class _ExistingParentConfirmationPageState
                     : _continueToChildInfo,
                 isLoading: authController.isLoading,
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: 22),
               GestureDetector(
                 onTap: _returnToSignup,
                 child: const Text(

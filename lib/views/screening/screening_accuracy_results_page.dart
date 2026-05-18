@@ -6,12 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/constants/app_text_styles.dart';
 import '../../models/screening_word_model.dart';
 import '../../services/model_2_assessment_service.dart';
 import '../../widgets/glow_asset_button.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
+import '../../widgets/primary_button.dart';
 import '../auth/auth_gate.dart';
 
 class ScreeningAccuracyResultsPage extends StatefulWidget {
@@ -249,89 +253,38 @@ class _ScreeningAccuracyResultsPageState
       );
     }
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 390),
-              child: Column(
-                children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: _FigmaCloseButton(onPressed: _goHome),
-                  ),
-                  const SizedBox(height: 52),
-                  const Text(
-                    'Screening Results',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.primary,
-                      fontFamily: AppFonts.fredokaOne,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w400,
-                      height: 1,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  const Text(
-                    'Detected Phonological Processes',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.textGray,
-                      fontFamily: AppFonts.fredoka,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      height: 1,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                  const SizedBox(height: 34),
-                  if (_results.isEmpty)
-                    const _EmptyResultsMessage()
-                  else
-                    ..._results.map(
-                      (result) => _FigmaResultTile(
-                        result: result,
-                        isPlaying: _playingWordId == result.wordId,
-                        onPlay: () => _playRecording(result),
-                      ),
-                    ),
-                  const SizedBox(height: 22),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 58,
-                    child: ElevatedButton(
-                      onPressed: _goHome,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      child: const Text(
-                        'Proceed',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontFamily: AppFonts.fredokaOne,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+    return OceanAuthScaffold(
+      showMascot: false,
+      showSandDecoration: false,
+      topSpacing: AppSpacing.authTopSpacingCompact,
+      bottomPadding: 28,
+      leading: OceanCloseButton(onPressed: _goHome),
+      children: [
+        const Text(
+          'Screening Results',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.screeningTitle,
+        ),
+        const SizedBox(height: 7),
+        const Text(
+          'Detected Phonological Processes',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.helper,
+        ),
+        const SizedBox(height: 34),
+        if (_results.isEmpty)
+          const _EmptyResultsMessage()
+        else
+          ..._results.map(
+            (result) => _FigmaResultTile(
+              result: result,
+              isPlaying: _playingWordId == result.wordId,
+              onPlay: () => _playRecording(result),
             ),
           ),
-        ),
-      ),
+        const SizedBox(height: 22),
+        PrimaryButton(text: 'Proceed', onPressed: _goHome),
+      ],
     );
   }
 }
@@ -462,34 +415,6 @@ class _LoadingContent extends StatelessWidget {
   }
 }
 
-class _FigmaCloseButton extends StatelessWidget {
-  final VoidCallback onPressed;
-
-  const _FigmaCloseButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Close',
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onPressed,
-        child: Container(
-          width: 26,
-          height: 26,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: const Color(0xFFD7D7D7),
-            borderRadius: BorderRadius.circular(2),
-          ),
-          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
-        ),
-      ),
-    );
-  }
-}
-
 class _FigmaResultTile extends StatelessWidget {
   final Model2AssessmentResult result;
   final bool isPlaying;
@@ -596,7 +521,7 @@ class _PlayRecordingButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GlowAssetButton(
-      assetPath: 'assets/icons/play_button.png',
+      assetPath: AppAssets.playButton,
       semanticsLabel: 'Play recording',
       onTap: onTap,
       isActive: isActive,

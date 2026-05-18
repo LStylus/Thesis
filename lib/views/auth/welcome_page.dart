@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/constants/app_text_styles.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import 'login_page.dart';
 
@@ -36,25 +37,23 @@ class _WelcomePageState extends State<WelcomePage> {
       behavior: HitTestBehavior.opaque,
       onTap: _continue,
       child: const OceanAuthScaffold(
-        topSpacing: 82,
+        topSpacing: AppSpacing.welcomeTopSpacing,
         showMascot: false,
-        bottomPadding: 118,
+        bottomPadding: AppSpacing.bottomContentPadding,
         children: [
           _WelcomeHero(),
-          SizedBox(height: 40),
-          FigmaWhaleMascot(width: 214, height: 118),
+          SizedBox(height: AppSpacing.gap2xl),
+          FigmaWhaleMascot(
+            width: AppSpacing.welcomeMascotWidth,
+            height: AppSpacing.welcomeMascotHeight,
+          ),
           SizedBox(height: 34),
           _DisclaimerCard(),
-          SizedBox(height: 82),
+          SizedBox(height: 56),
           Text(
             'tap anywhere on the screen to continue',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.textGray,
-              fontFamily: AppFonts.fredoka,
-              fontSize: 14,
-              letterSpacing: 0,
-            ),
+            style: AppTextStyles.subtitle,
           ),
         ],
       ),
@@ -72,7 +71,7 @@ class _WelcomeHero extends StatelessWidget {
         Text(
           'welcome to',
           textAlign: TextAlign.center,
-          style: OceanAuthTextStyles.subtitle,
+          style: AppTextStyles.subtitle,
         ),
         SizedBox(height: 2),
         FittedBox(
@@ -80,28 +79,14 @@ class _WelcomeHero extends StatelessWidget {
           child: Text(
             'VOICE VOYAGE',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.primary,
-              fontFamily: AppFonts.matemasie,
-              fontSize: 44,
-              fontWeight: FontWeight.w400,
-              height: 1.1,
-              letterSpacing: 0,
-            ),
+            style: AppTextStyles.appTitle,
           ),
         ),
         SizedBox(height: 2),
         Text(
           'your learning experience is ready.',
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.textGray,
-            fontFamily: AppFonts.fredoka,
-            fontSize: 11,
-            fontWeight: FontWeight.w500,
-            height: 1.1,
-            letterSpacing: 0,
-          ),
+          style: AppTextStyles.helper,
         ),
       ],
     );
@@ -115,10 +100,11 @@ class _DisclaimerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(18, 13, 18, 16),
+      constraints: const BoxConstraints(minHeight: 148),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
       decoration: BoxDecoration(
         color: const Color(0xFF66D4F1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
       ),
       child: Stack(
         clipBehavior: Clip.none,
@@ -126,14 +112,15 @@ class _DisclaimerCard extends StatelessWidget {
           const Positioned(
             left: -7,
             bottom: -8,
-            child: _DisclaimerBubble(size: 36, opacity: 0.18),
+            child: _DisclaimerBubble(size: 48, opacity: 0.18),
           ),
           const Positioned(
-            left: 19,
-            top: -3,
-            child: _DisclaimerBubble(size: 10, opacity: 0.24),
+            left: 22,
+            top: -5,
+            child: _DisclaimerBubble(size: 14, opacity: 0.24),
           ),
           const Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
                 'DISCLAIMER',
@@ -141,12 +128,12 @@ class _DisclaimerCard extends StatelessWidget {
                 style: TextStyle(
                   color: Color(0xFF206F91),
                   fontFamily: AppFonts.fredokaOne,
-                  fontSize: 12,
+                  fontSize: 18,
                   fontWeight: FontWeight.w400,
                   letterSpacing: 0,
                 ),
               ),
-              SizedBox(height: 5),
+              SizedBox(height: 10),
               Text(
                 'Voice Voyage is only an assistive application for speech practice. '
                 'Any existing and underlying health conditions affecting child\'s '
@@ -155,9 +142,9 @@ class _DisclaimerCard extends StatelessWidget {
                 style: TextStyle(
                   color: Color(0xFF2B7897),
                   fontFamily: AppFonts.fredoka,
-                  fontSize: 10.5,
+                  fontSize: 15.5,
                   fontWeight: FontWeight.w500,
-                  height: 1.2,
+                  height: 1.24,
                   letterSpacing: 0,
                 ),
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_fonts.dart';
+import '../constants/app_spacing.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
@@ -43,9 +44,9 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: Colors.white,
           elevation: 0,
-          minimumSize: const Size(double.infinity, 48),
+          minimumSize: const Size(double.infinity, AppSpacing.buttonHeight),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
           ),
           textStyle: const TextStyle(
             fontFamily: AppFonts.fredoka,
@@ -67,23 +68,23 @@ class AppTheme {
           fontSize: 14,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppSpacing.fieldRadius),
           borderSide: const BorderSide(color: AppColors.borderGray),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppSpacing.fieldRadius),
           borderSide: const BorderSide(color: AppColors.borderGray),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppSpacing.fieldRadius),
           borderSide: const BorderSide(color: AppColors.primary, width: 1.3),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppSpacing.fieldRadius),
           borderSide: const BorderSide(color: AppColors.error),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppSpacing.fieldRadius),
           borderSide: const BorderSide(color: AppColors.error, width: 1.3),
         ),
       ),

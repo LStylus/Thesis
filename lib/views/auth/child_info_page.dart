@@ -5,6 +5,8 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_spacing.dart';
+import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/testing_defaults.dart';
 import '../../models/profile_model.dart';
 import '../../widgets/custom_text_field.dart';
@@ -116,9 +118,11 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     if (!mounted) return;
 
     if (ok) {
-      Navigator.push(
+      Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => ScreeningPage(childAge: childAge)),
+        MaterialPageRoute(
+          builder: (_) => StartScreeningPage(childAge: childAge),
+        ),
       );
     }
   }
@@ -135,12 +139,8 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
             agePreview != null && !_isSupportedAge(agePreview);
 
         return OceanAuthScaffold(
-          topSpacing: 132,
-          leading: IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios_new_rounded),
-            color: const Color(0xFFC3C3C3),
-          ),
+          topSpacing: AppSpacing.authTopSpacing,
+          leading: OceanBackButton(onPressed: () => Navigator.pop(context)),
           children: [
             Form(
               key: _formKey,
@@ -151,13 +151,13 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
                     textAlign: TextAlign.center,
                     style: OceanAuthTextStyles.title,
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: AppSpacing.gapXs),
                   const Text(
                     'tell us about the child',
                     textAlign: TextAlign.center,
                     style: OceanAuthTextStyles.subtitle,
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: AppSpacing.gapXl),
                   CustomTextField(
                     controller: _childNameController,
                     hintText: "Child's Name",
@@ -169,23 +169,17 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 11),
+                  const SizedBox(height: AppSpacing.gapSm),
                   TextFormField(
                     controller: _birthDateController,
                     readOnly: true,
                     onTap: _pickDate,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      color: Colors.black87,
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: 0,
-                    ),
+                    style: AppTextStyles.field,
                     decoration: OceanFormStyles.inputDecoration(
                       "Child's Birthdate",
-                      suffixIcon: IconButton(
-                        onPressed: _pickDate,
+                      suffixIcon: const Icon(
+                        Icons.keyboard_arrow_down_rounded,
                         color: AppColors.borderGray,
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
                       ),
                     ),
                     validator: (value) {
@@ -215,7 +209,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 16),
+                  const SizedBox(height: AppSpacing.gapMd),
                   PrimaryButton(
                     text: 'Complete',
                     onPressed: authController.isLoading
