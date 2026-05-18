@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/testing_defaults.dart';
 import '../../models/profile_model.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
@@ -33,8 +34,14 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
       DeviceOrientation.portraitDown,
     ]);
     final authController = context.read<AuthController>();
-    _childNameController.text = authController.draft.childName;
-    _selectedDate = authController.draft.childBirthDate;
+    // Production behavior:
+    // _childNameController.text = authController.draft.childName;
+    // _selectedDate = authController.draft.childBirthDate;
+    _childNameController.text = authController.draft.childName.isNotEmpty
+        ? authController.draft.childName
+        : TestingDefaults.childName;
+    _selectedDate =
+        authController.draft.childBirthDate ?? TestingDefaults.childBirthDate;
 
     if (_selectedDate != null) {
       _birthDateController.text = DateFormat(

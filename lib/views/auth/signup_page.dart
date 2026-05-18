@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/testing_defaults.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
+import 'existing_parent_confirmation_page.dart';
 import 'parent_info_page.dart';
 
 class SignupPage extends StatefulWidget {
@@ -31,6 +33,13 @@ class _SignupPageState extends State<SignupPage> {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+
+    // Production behavior:
+    // _emailController.text = '';
+    // _passwordController.text = '';
+    // Testing only: the production behavior leaves these controllers empty.
+    _emailController.text = TestingDefaults.authEmail;
+    _passwordController.text = TestingDefaults.authPassword;
   }
 
   @override
@@ -68,7 +77,13 @@ class _SignupPageState extends State<SignupPage> {
     if (ok) {
       final shouldReset = await Navigator.push<bool>(
         context,
-        MaterialPageRoute(builder: (_) => const ParentInfoPage()),
+        MaterialPageRoute(
+          builder: (_) =>
+              authController.isExistingParentSession &&
+                  authController.draft.parentName.isNotEmpty
+              ? const ExistingParentConfirmationPage()
+              : const ParentInfoPage(),
+        ),
       );
 
       if (!mounted) return;

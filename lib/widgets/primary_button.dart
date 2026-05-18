@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_fonts.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String text;
@@ -50,6 +51,7 @@ class PrimaryButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(32.5),
             ),
             textStyle: const TextStyle(
+              fontFamily: AppFonts.fredoka,
               fontSize: 20,
               fontWeight: FontWeight.w700,
               letterSpacing: 0,

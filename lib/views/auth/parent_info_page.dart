@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/testing_defaults.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
@@ -41,10 +42,17 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
       DeviceOrientation.portraitDown,
     ]);
     final authController = context.read<AuthController>();
-    _nameController.text = authController.draft.parentName;
-    if (authController.draft.relationshipToChild.isNotEmpty) {
-      _selectedRelationship = authController.draft.relationshipToChild;
-    }
+    // Production behavior:
+    // _nameController.text = authController.draft.parentName;
+    // if (authController.draft.relationshipToChild.isNotEmpty) {
+    //   _selectedRelationship = authController.draft.relationshipToChild;
+    // }
+    _nameController.text = authController.draft.parentName.isNotEmpty
+        ? authController.draft.parentName
+        : TestingDefaults.parentName;
+    _selectedRelationship = authController.draft.relationshipToChild.isNotEmpty
+        ? authController.draft.relationshipToChild
+        : TestingDefaults.relationshipToChild;
   }
 
   @override

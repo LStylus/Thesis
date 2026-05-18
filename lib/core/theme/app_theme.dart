@@ -1,10 +1,25 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
+import '../constants/app_fonts.dart';
 
 class AppTheme {
   static ThemeData get lightTheme {
+    const baseTextTheme = TextTheme(
+      bodyLarge: TextStyle(fontFamily: AppFonts.fredoka),
+      bodyMedium: TextStyle(fontFamily: AppFonts.fredoka),
+      bodySmall: TextStyle(fontFamily: AppFonts.fredoka),
+      labelLarge: TextStyle(fontFamily: AppFonts.fredoka),
+      labelMedium: TextStyle(fontFamily: AppFonts.fredoka),
+      labelSmall: TextStyle(fontFamily: AppFonts.fredoka),
+      titleLarge: TextStyle(fontFamily: AppFonts.fredokaOne),
+      titleMedium: TextStyle(fontFamily: AppFonts.fredokaOne),
+      titleSmall: TextStyle(fontFamily: AppFonts.fredokaOne),
+    );
+
     return ThemeData(
       useMaterial3: true,
+      fontFamily: AppFonts.fredoka,
+      textTheme: baseTextTheme,
       scaffoldBackgroundColor: AppColors.background,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primary,
@@ -17,8 +32,9 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
+          fontFamily: AppFonts.fredokaOne,
           fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w400,
           color: Colors.white,
         ),
       ),
@@ -32,6 +48,7 @@ class AppTheme {
             borderRadius: BorderRadius.circular(30),
           ),
           textStyle: const TextStyle(
+            fontFamily: AppFonts.fredoka,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -40,8 +57,15 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        hintStyle: const TextStyle(color: AppColors.hintGray, fontSize: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        hintStyle: const TextStyle(
+          color: AppColors.hintGray,
+          fontFamily: AppFonts.fredoka,
+          fontSize: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: AppColors.borderGray),

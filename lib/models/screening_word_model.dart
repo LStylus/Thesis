@@ -1,3 +1,5 @@
+import '../core/constants/testing_defaults.dart';
+
 enum ScreeningWordPosition { initial, medial, finalPosition }
 
 extension ScreeningWordPositionLabel on ScreeningWordPosition {
@@ -39,10 +41,17 @@ class ScreeningWordModel {
       throw ArgumentError('Supported age range is 4 to 8.');
     }
 
-    if (age == 4) return age4Words;
-    if (age == 5) return age5Words;
-    if (age == 6 || age == 7) return age6To7Words;
-    return age8Words;
+    final words = age == 4
+        ? age4Words
+        : age == 5
+        ? age5Words
+        : (age == 6 || age == 7)
+        ? age6To7Words
+        : age8Words;
+
+    // Production behavior:
+    // return words;
+    return words.take(TestingDefaults.screeningWordsPerAge).toList();
   }
 
   // AGE 4

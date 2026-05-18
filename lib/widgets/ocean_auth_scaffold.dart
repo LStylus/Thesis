@@ -1,8 +1,10 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 import '../core/constants/app_colors.dart';
+import '../core/constants/app_fonts.dart';
 
 class OceanAuthScaffold extends StatelessWidget {
   final List<Widget> children;
@@ -39,38 +41,48 @@ class OceanAuthScaffold extends StatelessWidget {
             height: 126,
             child: IgnorePointer(child: CustomPaint(painter: _SandPainter())),
           ),
-          SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final contentWidth = math.min(
-                  math.max(0.0, constraints.maxWidth - 56),
-                  356.0,
-                );
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isCompact = constraints.maxHeight < 720;
+              final effectiveTopSpacing = math.max(
+                40.0,
+                topSpacing * (isCompact ? 0.68 : 1.0),
+              );
 
-                return SingleChildScrollView(
-                  padding: EdgeInsets.fromLTRB(28, 0, 28, bottomPadding),
-                  child: Align(
-                    alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: contentWidth,
-                      child: Column(
-                        children: [
-                          SizedBox(height: topSpacing),
-                          if (showMascot) ...[
-                            FigmaWhaleMascot(
-                              width: mascotWidth,
-                              height: mascotHeight,
-                            ),
-                            const SizedBox(height: 16),
-                          ],
-                          ...children,
-                        ],
+              return SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, safeConstraints) {
+                    final contentWidth = math.min(
+                      math.max(0.0, safeConstraints.maxWidth - 56),
+                      356.0,
+                    );
+
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(28, 0, 28, bottomPadding),
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: SizedBox(
+                          width: contentWidth,
+                          child: Column(
+                            children: [
+                              SizedBox(height: effectiveTopSpacing),
+                              if (showMascot) ...[
+                                FigmaWhaleMascot(
+                                  width: mascotWidth,
+                                  height: mascotHeight,
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+                              ...children,
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                );
-              },
-            ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
           if (leading != null)
             SafeArea(
@@ -96,7 +108,11 @@ class FigmaWhaleMascot extends StatelessWidget {
     return SizedBox(
       width: width,
       height: height,
-      child: const CustomPaint(painter: _WhalePainter()),
+      child: SvgPicture.asset(
+        'assets/characters/whale.svg',
+        fit: BoxFit.contain,
+        semanticsLabel: 'Voice Voyage whale mascot',
+      ),
     );
   }
 }
@@ -104,14 +120,16 @@ class FigmaWhaleMascot extends StatelessWidget {
 class OceanAuthTextStyles {
   static const TextStyle title = TextStyle(
     color: AppColors.primary,
+    fontFamily: AppFonts.fredokaOne,
     fontSize: 32,
-    fontWeight: FontWeight.w900,
+    fontWeight: FontWeight.w400,
     height: 1.22,
     letterSpacing: 0,
   );
 
   static const TextStyle subtitle = TextStyle(
     color: AppColors.textGray,
+    fontFamily: AppFonts.fredoka,
     fontSize: 16,
     fontWeight: FontWeight.w400,
     height: 1.2,
@@ -120,6 +138,7 @@ class OceanAuthTextStyles {
 
   static const TextStyle link = TextStyle(
     color: AppColors.textGray,
+    fontFamily: AppFonts.fredoka,
     fontSize: 14,
     fontWeight: FontWeight.w600,
     decoration: TextDecoration.underline,
@@ -140,6 +159,7 @@ class OceanFormStyles {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 21),
       hintStyle: const TextStyle(
         color: AppColors.textGray,
+        fontFamily: AppFonts.fredoka,
         fontSize: 16,
         fontWeight: FontWeight.w500,
         letterSpacing: 0,
@@ -158,83 +178,6 @@ class OceanFormStyles {
       borderSide: BorderSide(color: color, width: width),
     );
   }
-}
-
-class _WhalePainter extends CustomPainter {
-  const _WhalePainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..isAntiAlias = true;
-    final blue = AppColors.primary;
-    final w = size.width;
-    final h = size.height;
-    final sx = w / 304;
-    final sy = h / 170;
-
-    Offset p(double x, double y) => Offset(x * sx, y * sy);
-
-    paint.color = blue;
-    final body = RRect.fromRectAndRadius(
-      Rect.fromLTWH(45 * sx, 34 * sy, 214 * sx, 86 * sy),
-      Radius.circular(48 * sx),
-    );
-    canvas.drawRRect(body, paint);
-
-    final leftFin = Path()
-      ..moveTo(48 * sx, 82 * sy)
-      ..cubicTo(9 * sx, 79 * sy, 0, 90 * sy, 16 * sx, 109 * sy)
-      ..cubicTo(36 * sx, 132 * sy, 65 * sx, 118 * sy, 82 * sx, 94 * sy)
-      ..cubicTo(73 * sx, 87 * sy, 62 * sx, 84 * sy, 48 * sx, 82 * sy)
-      ..close();
-    canvas.drawPath(leftFin, paint);
-
-    final rightFin = Path()
-      ..moveTo(256 * sx, 82 * sy)
-      ..cubicTo(295 * sx, 79 * sy, 304 * sx, 90 * sy, 288 * sx, 109 * sy)
-      ..cubicTo(268 * sx, 132 * sy, 239 * sx, 118 * sy, 222 * sx, 94 * sy)
-      ..cubicTo(231 * sx, 87 * sy, 242 * sx, 84 * sy, 256 * sx, 82 * sy)
-      ..close();
-    canvas.drawPath(rightFin, paint);
-
-    paint.color = Colors.white;
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(74 * sx, 84 * sy, 156 * sx, 55 * sy),
-        Radius.circular(32 * sx),
-      ),
-      paint,
-    );
-
-    paint.color = blue;
-    canvas.drawOval(Rect.fromLTWH(107 * sx, 105 * sy, 90 * sx, 48 * sy), paint);
-
-    _drawEye(canvas, p(86, 56), sx, sy);
-    _drawEye(canvas, p(226, 56), sx, sy);
-  }
-
-  void _drawEye(Canvas canvas, Offset center, double sx, double sy) {
-    final paint = Paint()..isAntiAlias = true;
-    paint.color = Colors.white;
-    canvas.drawCircle(center, 14 * sx, paint);
-
-    paint.color = AppColors.primary;
-    canvas.drawCircle(
-      Offset(center.dx + 3 * sx, center.dy - 2 * sy),
-      10 * sx,
-      paint,
-    );
-
-    paint.color = Colors.white;
-    canvas.drawCircle(
-      Offset(center.dx - 5 * sx, center.dy - 7 * sy),
-      5 * sx,
-      paint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _SandPainter extends CustomPainter {

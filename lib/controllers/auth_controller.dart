@@ -21,6 +21,9 @@ class AuthController extends ChangeNotifier {
   /// It remains pending until the child info step is completed.
   String? pendingUid;
 
+  bool _isExistingParentSession = false;
+  bool get isExistingParentSession => _isExistingParentSession;
+
   void clearError() {
     if (errorMessage == null) return;
     errorMessage = null;
@@ -49,13 +52,6 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void clearDraft() {
-    _draft = SignupDraftModel();
-    pendingUid = null;
-    errorMessage = null;
-    notifyListeners();
-  }
-
   Future<bool> registerAccountStep1({
     required String email,
     required String password,
@@ -65,6 +61,7 @@ class AuthController extends ChangeNotifier {
 
     try {
       final cleanEmail = email.trim();
+      _isExistingParentSession = false;
 
       final credential = await _authService.signUpWithEmailPassword(
         email: cleanEmail,
@@ -77,10 +74,17 @@ class AuthController extends ChangeNotifier {
       }
 
       pendingUid = user.uid;
-      _draft = _draft.copyWith(email: cleanEmail);
+      _draft = SignupDraftModel(email: cleanEmail);
 
       return true;
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        return _continueWithExistingParent(
+          email: email.trim(),
+          password: password,
+        );
+      }
+
       errorMessage = _friendlySignupError(e.code);
       return false;
     } catch (_) {
@@ -88,6 +92,42 @@ class AuthController extends ChangeNotifier {
       return false;
     } finally {
       _setLoading(false);
+    }
+  }
+
+  Future<bool> _continueWithExistingParent({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final credential = await _authService.signInWithEmailPassword(
+        email: email,
+        password: password,
+      );
+
+      final user = credential.user;
+      if (user == null) {
+        errorMessage = 'Could not verify this guardian account.';
+        return false;
+      }
+
+      final parentInfo = await _userService.fetchParentAccount(user.uid);
+
+      pendingUid = user.uid;
+      _isExistingParentSession = true;
+      _draft = SignupDraftModel(
+        email: email,
+        parentName: parentInfo?.parentName ?? '',
+        relationshipToChild: parentInfo?.relationshipToChild ?? '',
+      );
+
+      return true;
+    } on FirebaseAuthException catch (e) {
+      errorMessage = _friendlyExistingAccountError(e.code);
+      return false;
+    } catch (_) {
+      errorMessage = 'Could not continue with this guardian account.';
+      return false;
     }
   }
 
@@ -110,14 +150,10 @@ class AuthController extends ChangeNotifier {
         return false;
       }
 
-      final appUser = AppUserModel(
-        userId: uid,
-        email: _draft.email,
-        createdAt: DateTime.now(),
-      );
+      final appUser = AppUserModel(userId: uid, email: _draft.email);
 
       final profile = ProfileModel(
-        profileId: uid,
+        profileId: _userService.createProfileId(),
         userId: uid,
         email: _draft.email,
         progressId: '',
@@ -133,6 +169,7 @@ class AuthController extends ChangeNotifier {
       await _authService.updateCurrentUserDisplayName(_draft.parentName);
 
       pendingUid = null;
+      _isExistingParentSession = false;
       return true;
     } catch (_) {
       errorMessage = 'Could not save profile data. Please try again.';
@@ -150,7 +187,8 @@ class AuthController extends ChangeNotifier {
 
       if (pendingUid != null &&
           currentUser != null &&
-          currentUser.uid == pendingUid) {
+          currentUser.uid == pendingUid &&
+          !_isExistingParentSession) {
         await currentUser.delete();
       }
     } on FirebaseAuthException catch (e) {
@@ -164,6 +202,7 @@ class AuthController extends ChangeNotifier {
 
       _draft = SignupDraftModel();
       pendingUid = null;
+      _isExistingParentSession = false;
       errorMessage = null;
       isLoading = false;
       notifyListeners();
@@ -226,6 +265,24 @@ class AuthController extends ChangeNotifier {
     }
   }
 
+  String _friendlyExistingAccountError(String code) {
+    switch (code) {
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'That email already exists. Enter the correct password to add another child.';
+      case 'user-disabled':
+        return 'This guardian account has been disabled.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      default:
+        return 'Could not verify this guardian account.';
+    }
+  }
+
   String _friendlyLoginError(String code) {
     switch (code) {
       case 'invalid-email':
@@ -245,6 +302,6 @@ class AuthController extends ChangeNotifier {
         return 'Email/password login is not enabled in Firebase.';
       default:
         return 'Incorrect email or password.';
-    } //   Signup error: $code
+    }
   }
 }

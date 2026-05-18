@@ -44,37 +44,37 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBLNc9M1bO1_nY_Zejqp24hWhnDgZ4kfcQ',
-    appId: '1:877785096323:web:d278fa649e2548bf48bbb6',
-    messagingSenderId: '877785096323',
-    projectId: 'thesis-d326c',
-    authDomain: 'thesis-d326c.firebaseapp.com',
-    storageBucket: 'thesis-d326c.firebasestorage.app',
+    apiKey: 'AIzaSyA2pjn_hhrtDEXTyfPvz7ZrMDLuUUhNGOE',
+    appId: '1:998191263599:web:cf88cf4e1af2d53fc9029a',
+    messagingSenderId: '998191263599',
+    projectId: 'voice-voyage-thesis-2026',
+    authDomain: 'voice-voyage-thesis-2026.firebaseapp.com',
+    storageBucket: 'voice-voyage-thesis-2026.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCl4BGjH7Is2el6PSZIkXOENepO83rZi3k',
-    appId: '1:877785096323:android:99b72f63c025c88f48bbb6',
-    messagingSenderId: '877785096323',
-    projectId: 'thesis-d326c',
-    storageBucket: 'thesis-d326c.firebasestorage.app',
+    apiKey: 'AIzaSyA7W0PsUBHX6JsGYMXxL1l5g6kLn1CUM3Q',
+    appId: '1:998191263599:android:3eb1969412394e0dc9029a',
+    messagingSenderId: '998191263599',
+    projectId: 'voice-voyage-thesis-2026',
+    storageBucket: 'voice-voyage-thesis-2026.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDmyw2wtpwBFoqKZ8MBuQtRDVomgN-SAvo',
-    appId: '1:877785096323:ios:a82bd7f6ca064c9748bbb6',
-    messagingSenderId: '877785096323',
-    projectId: 'thesis-d326c',
-    storageBucket: 'thesis-d326c.firebasestorage.app',
+    apiKey: 'AIzaSyDhWKoYkZz5YrSH6Rkuk7adhMLrKGO-_bA',
+    appId: '1:998191263599:ios:bfab31cae8338a76c9029a',
+    messagingSenderId: '998191263599',
+    projectId: 'voice-voyage-thesis-2026',
+    storageBucket: 'voice-voyage-thesis-2026.firebasestorage.app',
     iosBundleId: 'com.example.sampleCode',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBLNc9M1bO1_nY_Zejqp24hWhnDgZ4kfcQ',
-    appId: '1:877785096323:web:ed038d57cf3746e348bbb6',
-    messagingSenderId: '877785096323',
-    projectId: 'thesis-d326c',
-    authDomain: 'thesis-d326c.firebaseapp.com',
-    storageBucket: 'thesis-d326c.firebasestorage.app',
+    apiKey: 'AIzaSyA2pjn_hhrtDEXTyfPvz7ZrMDLuUUhNGOE',
+    appId: '1:998191263599:web:20f9163ad27910aec9029a',
+    messagingSenderId: '998191263599',
+    projectId: 'voice-voyage-thesis-2026',
+    authDomain: 'voice-voyage-thesis-2026.firebaseapp.com',
+    storageBucket: 'voice-voyage-thesis-2026.firebasestorage.app',
   );
 }

@@ -9,6 +9,9 @@ import '../services/audio_recording_service.dart';
 import '../services/model_2_assessment_service.dart';
 
 class ScreeningController extends ChangeNotifier {
+  static const bool _useTestingWordLimit = true;
+  static const int _testingWordsPerAge = 3;
+
   final int childAge;
 
   final AudioPlayer _player = AudioPlayer();
@@ -38,7 +41,11 @@ class ScreeningController extends ChangeNotifier {
       AudioRecordingService.defaultRecordDuration;
 
   ScreeningController({required this.childAge}) {
-    _words = ScreeningWordModel.resolveForAge(childAge);
+    final resolvedWords = ScreeningWordModel.resolveForAge(childAge);
+    // Testing only: set _useTestingWordLimit to false to restore full screening.
+    _words = _useTestingWordLimit
+        ? resolvedWords.take(_testingWordsPerAge).toList(growable: false)
+        : resolvedWords;
     _init();
   }
 
@@ -91,7 +98,6 @@ class ScreeningController extends ChangeNotifier {
   int get totalSteps => _words.length;
   bool get isLastWord => _currentIndex == _words.length - 1;
   ScreeningWordModel get currentWord => _words[_currentIndex];
-  //will remove
   Map<String, String> get recordingsByWordId =>
       Map.unmodifiable(_recordingsByWordId);
   Map<String, Model2AssessmentResult> get assessmentResultsByWordId =>

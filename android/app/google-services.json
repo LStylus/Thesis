@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "877785096323",
-    "project_id": "thesis-d326c",
-    "storage_bucket": "thesis-d326c.firebasestorage.app"
+    "project_number": "998191263599",
+    "project_id": "voice-voyage-thesis-2026",
+    "storage_bucket": "voice-voyage-thesis-2026.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:877785096323:android:99b72f63c025c88f48bbb6",
+        "mobilesdk_app_id": "1:998191263599:android:3eb1969412394e0dc9029a",
         "android_client_info": {
           "package_name": "com.example.sample_code"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCl4BGjH7Is2el6PSZIkXOENepO83rZi3k"
+          "current_key": "AIzaSyA7W0PsUBHX6JsGYMXxL1l5g6kLn1CUM3Q"
         }
       ],
       "services": {

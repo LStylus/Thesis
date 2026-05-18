@@ -1,14 +1,16 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/foundation.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_fonts.dart';
 import '../../models/screening_word_model.dart';
 import '../../services/model_2_assessment_service.dart';
+import '../../widgets/ocean_auth_scaffold.dart';
 import '../auth/auth_gate.dart';
 
 class ScreeningAccuracyResultsPage extends StatefulWidget {
@@ -31,20 +33,31 @@ class ScreeningAccuracyResultsPage extends StatefulWidget {
 class _ScreeningAccuracyResultsPageState
     extends State<ScreeningAccuracyResultsPage> {
   final Model2AssessmentService _assessmentService = Model2AssessmentService();
+  final AudioPlayer _player = AudioPlayer();
   final List<Model2AssessmentResult> _results = [];
 
   bool _isRunning = true;
   int _processedCount = 0;
-  String? _resultsFilePath;
 
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
+    _forceLandscape();
+    _runAssessments();
+  }
+
+  static Future<void> _forceLandscape() {
+    return SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+  }
+
+  static Future<void> _forcePortrait() {
+    return SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
-    _runAssessments();
   }
 
   Future<void> _runAssessments() async {
@@ -106,10 +119,10 @@ class _ScreeningAccuracyResultsPageState
       'detected_processes=${_detectedProcessesForPayload.length} '
       'result_file=$filePath',
     );
+    await _forcePortrait();
     if (!mounted) return;
 
     setState(() {
-      _resultsFilePath = filePath;
       _isRunning = false;
     });
   }
@@ -146,30 +159,15 @@ class _ScreeningAccuracyResultsPageState
   }
 
   List<Map<String, dynamic>> get _detectedProcessesForPayload {
-    return _results
-        .expand((result) {
-          return result.detectedProcesses.map((process) {
-            return {
-              'word_id': result.wordId,
-              'display_word': result.displayWord,
-              ...process,
-            };
-          });
-        })
-        .toList();
-  }
-
-  List<String> get _detectedProcessNames {
-    final names = <String>{};
-    for (final result in _results) {
-      for (final process in result.detectedProcesses) {
-        final name = process['process']?.toString();
-        if (name != null && name.isNotEmpty) {
-          names.add(name);
-        }
-      }
-    }
-    return names.toList();
+    return _results.expand((result) {
+      return result.detectedProcesses.map((process) {
+        return {
+          'word_id': result.wordId,
+          'display_word': result.displayWord,
+          ...process,
+        };
+      });
+    }).toList();
   }
 
   void _logDetectedProcesses(Model2AssessmentResult result) {
@@ -190,9 +188,22 @@ class _ScreeningAccuracyResultsPageState
       final name = process['process'];
       final position = process['position'];
       final detail = process['detail'];
-      debugPrint(
-        '$prefix process=$name position=$position detail=$detail',
-      );
+      debugPrint('$prefix process=$name position=$position detail=$detail');
+    }
+  }
+
+  Future<void> _playRecording(Model2AssessmentResult result) async {
+    final path = result.recordingPath;
+    if (path.isEmpty) return;
+
+    final file = File(path);
+    if (!await file.exists()) return;
+
+    try {
+      await _player.stop();
+      await _player.play(DeviceFileSource(path));
+    } catch (error) {
+      debugPrint('[screening-results] play_recording_error=$error path=$path');
     }
   }
 
@@ -204,94 +215,97 @@ class _ScreeningAccuracyResultsPageState
   }
 
   @override
+  void dispose() {
+    _forcePortrait();
+    _player.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final detectedProcessNames = _detectedProcessNames;
+    if (_isRunning) {
+      return _LandscapeLoadingView(
+        processedCount: _processedCount,
+        totalCount: widget.words.length,
+      );
+    }
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            padding: const EdgeInsets.fromLTRB(24, 18, 24, 28),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
+              constraints: const BoxConstraints(maxWidth: 390),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    _isRunning
-                        ? 'Checking pronunciation...'
-                        : 'Screening Results',
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: _FigmaCloseButton(onPressed: _goHome),
+                  ),
+                  const SizedBox(height: 52),
+                  const Text(
+                    'Screening Results',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.primary,
+                      fontFamily: AppFonts.fredokaOne,
                       fontSize: 24,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.w400,
+                      height: 1,
+                      letterSpacing: 0,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Detected phonological processes from the screening API',
+                  const SizedBox(height: 7),
+                  const Text(
+                    'Detected Phonological Processes',
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: AppColors.textGray,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                      fontFamily: AppFonts.fredoka,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      height: 1,
+                      letterSpacing: 0,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  if (_isRunning) ...[
-                    LinearProgressIndicator(
-                      value: widget.words.isEmpty
-                          ? null
-                          : _processedCount / widget.words.length,
-                      color: AppColors.primary,
-                      backgroundColor: AppColors.primary.withValues(
-                        alpha: 0.16,
+                  const SizedBox(height: 34),
+                  if (_results.isEmpty)
+                    const _EmptyResultsMessage()
+                  else
+                    ..._results.map(
+                      (result) => _FigmaResultTile(
+                        result: result,
+                        onPlay: () => _playRecording(result),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'Processed $_processedCount / ${widget.words.length}',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.textGray,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ] else ...[
-                    _DetectedProcessSummaryCard(
-                      processNames: detectedProcessNames,
-                    ),
-                    if (_resultsFilePath != null) ...[
-                      const SizedBox(height: 12),
-                      _TemporaryFileCard(path: _resultsFilePath!),
-                    ],
-                  ],
-                  const SizedBox(height: 18),
-                  ..._results.map((result) => _ResultCard(result: result)),
-                  if (!_isRunning) ...[
-                    const SizedBox(height: 18),
-                    ElevatedButton(
+                  const SizedBox(height: 22),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 58,
+                    child: ElevatedButton(
                       onPressed: _goHome,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                       ),
                       child: const Text(
-                        'Continue to Home',
+                        'Proceed',
                         style: TextStyle(
-                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                          fontFamily: AppFonts.fredokaOne,
                           fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 0,
                         ),
                       ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ),
@@ -302,67 +316,124 @@ class _ScreeningAccuracyResultsPageState
   }
 }
 
-class _DetectedProcessSummaryCard extends StatelessWidget {
-  final List<String> processNames;
+class _LandscapeLoadingView extends StatelessWidget {
+  final int processedCount;
+  final int totalCount;
 
-  const _DetectedProcessSummaryCard({required this.processNames});
+  const _LandscapeLoadingView({
+    required this.processedCount,
+    required this.totalCount,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final text = processNames.isEmpty
-        ? 'No detected phonological process returned yet'
-        : 'Detected: ${processNames.join(', ')}';
+    final progress = totalCount == 0 ? null : processedCount / totalCount;
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEFFBFF),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Text(
-        text,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: AppColors.primary,
-          fontSize: 18,
-          fontWeight: FontWeight.w900,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 22),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 760),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth > 560;
+                  final whale = const FigmaWhaleMascot(width: 210, height: 116);
+                  final content = _LoadingContent(
+                    progress: progress,
+                    processedCount: processedCount,
+                    totalCount: totalCount,
+                  );
+
+                  if (!isWide) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [whale, const SizedBox(height: 22), content],
+                    );
+                  }
+
+                  return Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      whale,
+                      const SizedBox(width: 54),
+                      Flexible(child: content),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class _TemporaryFileCard extends StatelessWidget {
-  final String path;
+class _LoadingContent extends StatelessWidget {
+  final double? progress;
+  final int processedCount;
+  final int totalCount;
 
-  const _TemporaryFileCard({required this.path});
+  const _LoadingContent({
+    required this.progress,
+    required this.processedCount,
+    required this.totalCount,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(16),
-      ),
+    return SizedBox(
+      width: 390,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Temporary result file',
+            'Screening Results',
+            textAlign: TextAlign.left,
             style: TextStyle(
-              color: Color(0xFF4B4B4B),
-              fontSize: 12,
-              fontWeight: FontWeight.w900,
+              color: AppColors.primary,
+              fontFamily: AppFonts.fredokaOne,
+              fontSize: 28,
+              fontWeight: FontWeight.w400,
+              height: 1,
+              letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 6),
-          SelectableText(
-            path,
+          const SizedBox(height: 8),
+          const Text(
+            'Detected phonological processes are being prepared.',
+            style: TextStyle(
+              color: AppColors.textGray,
+              fontFamily: AppFonts.fredoka,
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              height: 1.2,
+              letterSpacing: 0,
+            ),
+          ),
+          const SizedBox(height: 22),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              color: AppColors.primary,
+              backgroundColor: AppColors.primary.withValues(alpha: 0.14),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            'Processing $processedCount / $totalCount',
             style: const TextStyle(
               color: AppColors.textGray,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+              fontFamily: AppFonts.fredokaOne,
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0,
             ),
           ),
         ],
@@ -371,86 +442,168 @@ class _TemporaryFileCard extends StatelessWidget {
   }
 }
 
-class _ResultCard extends StatelessWidget {
-  final Model2AssessmentResult result;
+class _FigmaCloseButton extends StatelessWidget {
+  final VoidCallback onPressed;
 
-  const _ResultCard({required this.result});
+  const _FigmaCloseButton({required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Close',
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: Container(
+          width: 26,
+          height: 26,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: const Color(0xFFD7D7D7),
+            borderRadius: BorderRadius.circular(2),
+          ),
+          child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
+        ),
+      ),
+    );
+  }
+}
+
+class _FigmaResultTile extends StatelessWidget {
+  final Model2AssessmentResult result;
+  final VoidCallback onPlay;
+
+  const _FigmaResultTile({required this.result, required this.onPlay});
 
   @override
   Widget build(BuildContext context) {
     final score = result.overallScore;
-    final isSuccess = result.isSuccess;
+    final processText = result.isSuccess
+        ? result.detectedProcessSummary
+        : result.error ?? 'Unable to process sample';
+    final detectedWord = result.detectedIpa?.trim().isNotEmpty == true
+        ? result.detectedIpa!
+        : result.displayWord;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE7E7E7)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  result.displayWord,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  result.displayWord.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF4B4B4B),
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
+                    color: AppColors.primary,
+                    fontFamily: AppFonts.fredokaOne,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    height: 1,
+                    letterSpacing: 0,
                   ),
                 ),
-              ),
-              Text(
-                isSuccess ? '${score!.toStringAsFixed(1)}%' : 'Error',
-                style: TextStyle(
-                  color: isSuccess ? const Color(0xFF18A85A) : AppColors.error,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w900,
+                const SizedBox(height: 3),
+                Text(
+                  'Detected Word: $detectedWord',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textGray,
+                    fontFamily: AppFonts.fredoka,
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w500,
+                    height: 1.1,
+                    letterSpacing: 0,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  'Process: $processText',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.textGray,
+                    fontFamily: AppFonts.fredoka,
+                    fontSize: 8.5,
+                    fontWeight: FontWeight.w500,
+                    height: 1.1,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(999),
+                  child: LinearProgressIndicator(
+                    value: score == null ? 0.0 : (score / 100).clamp(0.0, 1.0),
+                    minHeight: 4,
+                    color: AppColors.primary,
+                    backgroundColor: const Color(0xFFE3E3E3),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          if (isSuccess) ...[
-            LinearProgressIndicator(
-              value: (score! / 100).clamp(0.0, 1.0),
-              minHeight: 8,
-              borderRadius: BorderRadius.circular(999),
-              color: const Color(0xFF18A85A),
-              backgroundColor: const Color(0xFFEAF8F0),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Expected: ${result.expectedIpa ?? '-'}   Detected: ${result.detectedIpa ?? '-'}',
-              style: const TextStyle(
-                color: AppColors.textGray,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'Process: ${result.detectedProcessSummary}',
-              style: const TextStyle(
-                color: Color(0xFF3F5F73),
-                fontSize: 12,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ] else
-            Text(
-              result.error ?? 'Unknown model error.',
-              style: const TextStyle(
-                color: AppColors.error,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+          const SizedBox(width: 13),
+          _PlayRecordingButton(onTap: onPlay),
         ],
+      ),
+    );
+  }
+}
+
+class _PlayRecordingButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _PlayRecordingButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Play recording',
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          width: 43,
+          height: 43,
+          child: Image.asset(
+            'assets/icons/play_button.png',
+            fit: BoxFit.contain,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptyResultsMessage extends StatelessWidget {
+  const _EmptyResultsMessage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5F5F5),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: const Text(
+        'No screening samples were processed.',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: AppColors.textGray,
+          fontFamily: AppFonts.fredoka,
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0,
+        ),
       ),
     );
   }

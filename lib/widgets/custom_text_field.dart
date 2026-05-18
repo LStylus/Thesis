@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/constants/app_fonts.dart';
 import 'ocean_auth_scaffold.dart';
 
 class CustomTextField extends StatelessWidget {
@@ -29,6 +30,7 @@ class CustomTextField extends StatelessWidget {
       onChanged: onChanged,
       keyboardType: keyboardType,
       style: const TextStyle(
+        fontFamily: AppFonts.fredoka,
         fontSize: 16,
         color: Colors.black87,
         fontWeight: FontWeight.w500,

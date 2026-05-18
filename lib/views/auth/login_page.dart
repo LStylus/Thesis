@@ -4,9 +4,11 @@ import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/testing_defaults.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
+import 'auth_gate.dart';
 import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -28,6 +30,13 @@ class _LoginPageState extends State<LoginPage> {
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
+
+    // Production behavior:
+    // _emailController.text = '';
+    // _passwordController.text = '';
+    // Testing only: the production behavior leaves these controllers empty.
+    _emailController.text = TestingDefaults.authEmail;
+    _passwordController.text = TestingDefaults.authPassword;
   }
 
   @override
@@ -40,9 +49,16 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login(AuthController authController) async {
     if (!_formKey.currentState!.validate()) return;
 
-    await authController.login(
+    final ok = await authController.login(
       email: _emailController.text,
       password: _passwordController.text,
+    );
+
+    if (!mounted || !ok) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthGate()),
+      (route) => false,
     );
   }
 

@@ -11,8 +11,6 @@ class HomeController {
     if (user == null) {
       return Stream.value(null);
     }
-    return _userService.streamProfileByUserId(user.uid);
+    return _userService.streamActiveProfileByUserId(user.uid);
   }
-
-  Future<void> signOut() => _authService.signOut();
 }
