@@ -143,20 +143,8 @@ class UserService {
   }
 
   Stream<ProfileModel?> streamActiveProfileByUserId(String uid) {
-    return _users.doc(uid).snapshots().asyncExpand((userDoc) {
-      final userData = userDoc.data();
-      final activeProfileId = _stringValue(userData?['activeProfileId']);
-      final legacyProfileId = _stringValue(userData?['profileId']);
-      final profileId = activeProfileId.isNotEmpty
-          ? activeProfileId
-          : legacyProfileId.isNotEmpty
-          ? legacyProfileId
-          : uid;
-
-      return _profiles.doc(profileId).snapshots().map((profileDoc) {
-        if (!profileDoc.exists || profileDoc.data() == null) return null;
-        return ProfileModel.fromMap(profileDoc.data()!);
-      });
+    return _users.doc(uid).snapshots().asyncMap((userDoc) {
+      return _resolveActiveProfile(uid, userDoc.data());
     });
   }
 
@@ -183,6 +171,13 @@ class UserService {
               (profile) => !seenIds.contains(profile.profileId),
             ),
           );
+        }
+
+        if (profiles.isEmpty) {
+          final legacyProfile = _profileFromUserData(uid, userData);
+          if (legacyProfile != null) {
+            profiles.add(legacyProfile);
+          }
         }
 
         profiles.sort((left, right) {
@@ -238,6 +233,13 @@ class UserService {
       }
     }
 
+    if (profilesById.isEmpty) {
+      final legacyProfile = _profileFromUserData(uid, userData);
+      if (legacyProfile != null) {
+        profilesById[legacyProfile.profileId] = legacyProfile;
+      }
+    }
+
     final usedAssets = <String>{
       ..._stringList(userData['usedProfileAssets']),
     };
@@ -254,7 +256,9 @@ class UserService {
     }
 
     final assignedAssets = <String>{parentProfileAssetPath};
+    final currentActiveProfileId = _stringValue(userData['activeProfileId']);
     String? activeChildProfileAssetPath;
+    ProfileModel? activeProfile;
     final orderedProfiles = profilesById.values.toList()
       ..sort(
         (left, right) => left.childName.toLowerCase().compareTo(
@@ -297,8 +301,12 @@ class UserService {
         );
       }
 
-      if (profile.profileId == _stringValue(userData['activeProfileId'])) {
+      final shouldUseAsActive =
+          profile.profileId == currentActiveProfileId ||
+          (currentActiveProfileId.isEmpty && activeProfile == null);
+      if (shouldUseAsActive) {
         activeChildProfileAssetPath = resolvedAssetPath;
+        activeProfile = profile.copyWith(profileAssetPath: resolvedAssetPath);
       }
     }
 
@@ -307,6 +315,7 @@ class UserService {
     final currentActiveAsset = _stringValue(userData['activeChildProfileAssetPath']);
     if (!_listsMatchAsSets(currentUsedAssets, finalUsedAssets) ||
         currentActiveAsset != activeChildProfileAssetPath ||
+        (currentActiveProfileId.isEmpty && activeProfile != null) ||
         existingParentAssetPath != parentProfileAssetPath) {
       hasWrites = true;
     }
@@ -316,6 +325,12 @@ class UserService {
     batch.set(userRef, {
       'parentProfileAssetPath': parentProfileAssetPath,
       'usedProfileAssets': finalUsedAssets,
+      if (activeProfile != null) ...{
+        'activeProfileId': activeProfile.profileId,
+        'activeChildName': activeProfile.childName,
+        'activeChildBirthDate': Timestamp.fromDate(activeProfile.birthDate),
+        'activeChildAge': activeProfile.age,
+      },
       if (activeChildProfileAssetPath != null)
         'activeChildProfileAssetPath': activeChildProfileAssetPath,
       'updatedAt': FieldValue.serverTimestamp(),
@@ -379,6 +394,81 @@ class UserService {
 
   static String _normalizeName(String value) {
     return value.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+  }
+
+  Future<ProfileModel?> _resolveActiveProfile(
+    String uid,
+    Map<String, dynamic>? userData,
+  ) async {
+    if (userData == null) return null;
+
+    final userRef = _users.doc(uid);
+    final profileIds = <String>{
+      ..._profileIdsForUserData(userData),
+      uid,
+    }.where((profileId) => profileId.isNotEmpty);
+
+    for (final profileId in profileIds) {
+      final profileDoc = await _profiles.doc(profileId).get();
+      final profileData = profileDoc.data();
+      if (profileData != null) {
+        return ProfileModel.fromMap(profileData);
+      }
+
+      final childDoc = await userRef.collection('children').doc(profileId).get();
+      final childData = childDoc.data();
+      if (childData != null) {
+        return ProfileModel.fromMap(childData);
+      }
+    }
+
+    final childSnapshot = await userRef.collection('children').limit(1).get();
+    if (childSnapshot.docs.isNotEmpty) {
+      return ProfileModel.fromMap(childSnapshot.docs.first.data());
+    }
+
+    return _profileFromUserData(uid, userData);
+  }
+
+  ProfileModel? _profileFromUserData(String uid, Map<String, dynamic>? userData) {
+    if (userData == null) return null;
+
+    final childName = _firstString([
+      userData['childName'],
+      userData['activeChildName'],
+    ]);
+    if (childName.isEmpty) return null;
+
+    final profileId = _firstString([
+      userData['activeProfileId'],
+      userData['profileId'],
+      userData['uid'],
+      uid,
+    ]);
+
+    return ProfileModel.fromMap({
+      ...userData,
+      'profileId': profileId.isNotEmpty ? profileId : uid,
+      'userId': uid,
+      'uid': uid,
+      'childName': childName,
+      'birthDate':
+          userData['birthDate'] ??
+          userData['childBirthDate'] ??
+          userData['activeChildBirthDate'],
+      'profileAssetPath': _firstString([
+        userData['profileAssetPath'],
+        userData['activeChildProfileAssetPath'],
+      ]),
+    });
+  }
+
+  static String _firstString(Iterable<Object?> values) {
+    for (final value in values) {
+      final text = _stringValue(value);
+      if (text.isNotEmpty) return text;
+    }
+    return '';
   }
 
   List<String> _profileIdsForUserData(Map<String, dynamic>? userData) {

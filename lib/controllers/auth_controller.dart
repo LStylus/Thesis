@@ -258,10 +258,18 @@ class AuthController extends ChangeNotifier {
     _setLoading(true);
 
     try {
-      await _authService.signInWithEmailPassword(
+      final credential = await _authService.signInWithEmailPassword(
         email: email.trim(),
         password: password,
       );
+      final user = credential.user;
+      if (user != null) {
+        try {
+          await _userService.ensureProfileAssetsForUser(user.uid);
+        } catch (e) {
+          debugPrint('Profile backfill after login failed: $e');
+        }
+      }
 
       errorMessage = null;
       notifyListeners();
