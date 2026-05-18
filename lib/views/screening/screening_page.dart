@@ -17,29 +17,57 @@ import '../../widgets/primary_button.dart';
 import '../auth/auth_gate.dart';
 import 'screening_accuracy_results_page.dart';
 
-class StartScreeningPage extends StatelessWidget {
+class StartScreeningPage extends StatefulWidget {
   final int childAge;
 
   const StartScreeningPage({super.key, required this.childAge});
 
+  @override
+  State<StartScreeningPage> createState() => _StartScreeningPageState();
+}
+
+class _StartScreeningPageState extends State<StartScreeningPage> {
+  @override
+  void initState() {
+    super.initState();
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+  }
+
   void _startScreening(BuildContext context) {
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => ScreeningPage(childAge: childAge)),
+      MaterialPageRoute(
+          builder: (_) => ScreeningPage(childAge: widget.childAge)),
     );
   }
 
   Future<void> _goHome(BuildContext context) async {
-    await context.read<AuthController>().discardPendingProfile();
+    final authController = context.read<AuthController>();
+    final isExisting = authController.isExistingParentSession;
+
+    await authController.discardPendingProfile();
     if (!context.mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthGate()),
-      (route) => false,
-    );
+
+    if (isExisting) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      if (!context.mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (route) => false,
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final wordCount = ScreeningWordModel.resolveForAge(childAge).length;
+    final wordCount = ScreeningWordModel.resolveForAge(widget.childAge).length;
 
     return PopScope(
       canPop: false,
@@ -180,17 +208,30 @@ class _ScreeningViewState extends State<_ScreeningView> {
   }
 
   Future<void> _exitScreening(ScreeningController controller) async {
+    final authController = context.read<AuthController>();
+    final isExisting = authController.isExistingParentSession;
+
     await controller.cancelAndClearAll();
     if (!mounted) return;
-    await context.read<AuthController>().discardPendingProfile();
+    await authController.discardPendingProfile();
     if (!mounted) return;
-    setState(() {
-      _allowPop = true;
-    });
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthGate()),
-      (route) => false,
-    );
+
+    if (isExisting) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (route) => false,
+      );
+    } else {
+      setState(() {
+        _allowPop = true;
+      });
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> _handleNext(ScreeningController controller) async {

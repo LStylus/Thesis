@@ -73,10 +73,10 @@ class _LearningReportPageState extends State<LearningReportPage> {
                 children: [
                   SizedBox(
                     height: 48,
-                    child: Stack(
+                    child: const Stack(
                       alignment: Alignment.center,
                       children: [
-                        const Text(
+                        Text(
                           'Learning Report',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -86,17 +86,6 @@ class _LearningReportPageState extends State<LearningReportPage> {
                             fontWeight: FontWeight.w400,
                             height: 1.1,
                             letterSpacing: 0,
-                          ),
-                        ),
-                        Positioned(
-                          left: horizontalPadding - 6,
-                          child: IconButton(
-                            onPressed: () => Navigator.of(context).maybePop(),
-                            icon: const Icon(
-                              Icons.close_rounded,
-                              color: Color(0xFFCFCFCF),
-                              size: 26,
-                            ),
                           ),
                         ),
                       ],

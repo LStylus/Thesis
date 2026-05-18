@@ -118,7 +118,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     if (!mounted) return;
 
     if (ok) {
-      Navigator.pushReplacement(
+      Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => StartScreeningPage(childAge: childAge),

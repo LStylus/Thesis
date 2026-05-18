@@ -226,12 +226,28 @@ class _ScreeningAccuracyResultsPageState
   }
 
   Future<void> _discardAndGoHome() async {
-    await context.read<AuthController>().discardPendingProfile();
+    final authController = context.read<AuthController>();
+    final isExisting = authController.isExistingParentSession;
+
+    await authController.discardPendingProfile();
     if (!mounted) return;
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthGate()),
-      (route) => false,
-    );
+
+    if (isExisting) {
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (route) => false,
+      );
+    } else {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const AuthGate()),
+        (route) => false,
+      );
+    }
   }
 
   Future<void> _proceedToHome() async {
