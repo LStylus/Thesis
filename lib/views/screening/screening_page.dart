@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../controllers/screening_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
+import '../../widgets/glow_asset_button.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import 'screening_accuracy_results_page.dart';
 
@@ -30,7 +31,11 @@ class _ScreeningView extends StatefulWidget {
 }
 
 class _ScreeningViewState extends State<_ScreeningView> {
+  static const Duration _minimumGlowDuration = Duration(milliseconds: 260);
+
   bool _allowPop = false;
+  bool _isResettingWord = false;
+  bool _isAdvancingWord = false;
 
   @override
   void initState() {
@@ -70,6 +75,33 @@ class _ScreeningViewState extends State<_ScreeningView> {
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _runPulsedAction({
+    required bool isRunning,
+    required ValueSetter<bool> setFlag,
+    required Future<void> Function() action,
+  }) async {
+    if (isRunning) return;
+
+    setState(() {
+      setFlag(true);
+    });
+
+    final stopwatch = Stopwatch()..start();
+    try {
+      await action();
+    } finally {
+      final remaining = _minimumGlowDuration - stopwatch.elapsed;
+      if (remaining > Duration.zero) {
+        await Future.delayed(remaining);
+      }
+      if (mounted) {
+        setState(() {
+          setFlag(false);
+        });
+      }
     }
   }
 
@@ -192,38 +224,52 @@ class _ScreeningViewState extends State<_ScreeningView> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       if (!hasRecording)
-                        _ScreeningIconButton(
+                        GlowAssetButton(
                           assetPath: 'assets/icons/play_button.png',
                           semanticsLabel: 'Play prompt',
+                          isActive: controller.isPromptPlaying,
                           onTap: controller.canPlayPrompt
                               ? controller.playPromptAudio
                               : null,
                         )
                       else
-                        _ScreeningIconButton(
+                        GlowAssetButton(
                           assetPath: 'assets/icons/try_again_button.png',
                           semanticsLabel: 'Try again',
+                          isActive: _isResettingWord,
                           onTap: controlsDisabled
                               ? null
-                              : controller.repeatCurrentWord,
+                              : () => _runPulsedAction(
+                                  isRunning: _isResettingWord,
+                                  setFlag: (value) =>
+                                      _isResettingWord = value,
+                                  action: controller.repeatCurrentWord,
+                                ),
                         ),
                       const SizedBox(width: 22),
                       if (!hasRecording)
-                        _ScreeningIconButton(
+                        GlowAssetButton(
                           assetPath: 'assets/icons/microphone_button.png',
                           semanticsLabel: 'Record word',
+                          isActive: controller.isRecording,
                           onTap: controller.canRecord
                               ? controller.startTimedRecording
                               : null,
                           size: 72,
                         )
                       else
-                        _ScreeningIconButton(
+                        GlowAssetButton(
                           assetPath: 'assets/icons/next_button.png',
                           semanticsLabel: 'Next word',
+                          isActive: _isAdvancingWord,
                           onTap: controlsDisabled
                               ? null
-                              : () => _handleNext(controller),
+                              : () => _runPulsedAction(
+                                  isRunning: _isAdvancingWord,
+                                  setFlag: (value) =>
+                                      _isAdvancingWord = value,
+                                  action: () => _handleNext(controller),
+                                ),
                         ),
                     ],
                   ),
@@ -305,41 +351,6 @@ class _FigmaCloseButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(2),
           ),
           child: const Icon(Icons.close_rounded, color: Colors.white, size: 18),
-        ),
-      ),
-    );
-  }
-}
-
-class _ScreeningIconButton extends StatelessWidget {
-  final String assetPath;
-  final String semanticsLabel;
-  final VoidCallback? onTap;
-  final double size;
-
-  const _ScreeningIconButton({
-    required this.assetPath,
-    required this.semanticsLabel,
-    required this.onTap,
-    this.size = 68,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: semanticsLabel,
-      button: true,
-      enabled: onTap != null,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: Opacity(
-          opacity: onTap == null ? 0.45 : 1,
-          child: SizedBox(
-            width: size,
-            height: size,
-            child: Image.asset(assetPath, fit: BoxFit.contain),
-          ),
         ),
       ),
     );

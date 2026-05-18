@@ -10,6 +10,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
 import '../../models/screening_word_model.dart';
 import '../../services/model_2_assessment_service.dart';
+import '../../widgets/glow_asset_button.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../auth/auth_gate.dart';
 
@@ -38,6 +39,8 @@ class _ScreeningAccuracyResultsPageState
 
   bool _isRunning = true;
   int _processedCount = 0;
+  String? _playingWordId;
+  int _playbackSession = 0;
 
   @override
   void initState() {
@@ -199,11 +202,26 @@ class _ScreeningAccuracyResultsPageState
     final file = File(path);
     if (!await file.exists()) return;
 
+    final session = ++_playbackSession;
+    if (mounted) {
+      setState(() {
+        _playingWordId = result.wordId;
+      });
+    }
+
     try {
       await _player.stop();
+      final completion = _player.onPlayerComplete.first;
       await _player.play(DeviceFileSource(path));
+      await completion.timeout(const Duration(seconds: 20));
     } catch (error) {
       debugPrint('[screening-results] play_recording_error=$error path=$path');
+    } finally {
+      if (mounted && session == _playbackSession) {
+        setState(() {
+          _playingWordId = null;
+        });
+      }
     }
   }
 
@@ -216,6 +234,7 @@ class _ScreeningAccuracyResultsPageState
 
   @override
   void dispose() {
+    _playbackSession++;
     _forcePortrait();
     _player.dispose();
     super.dispose();
@@ -277,6 +296,7 @@ class _ScreeningAccuracyResultsPageState
                     ..._results.map(
                       (result) => _FigmaResultTile(
                         result: result,
+                        isPlaying: _playingWordId == result.wordId,
                         onPlay: () => _playRecording(result),
                       ),
                     ),
@@ -472,9 +492,14 @@ class _FigmaCloseButton extends StatelessWidget {
 
 class _FigmaResultTile extends StatelessWidget {
   final Model2AssessmentResult result;
+  final bool isPlaying;
   final VoidCallback onPlay;
 
-  const _FigmaResultTile({required this.result, required this.onPlay});
+  const _FigmaResultTile({
+    required this.result,
+    required this.isPlaying,
+    required this.onPlay,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -549,7 +574,10 @@ class _FigmaResultTile extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 13),
-          _PlayRecordingButton(onTap: onPlay),
+          _PlayRecordingButton(
+            onTap: onPlay,
+            isActive: isPlaying,
+          ),
         ],
       ),
     );
@@ -558,26 +586,23 @@ class _FigmaResultTile extends StatelessWidget {
 
 class _PlayRecordingButton extends StatelessWidget {
   final VoidCallback onTap;
+  final bool isActive;
 
-  const _PlayRecordingButton({required this.onTap});
+  const _PlayRecordingButton({
+    required this.onTap,
+    required this.isActive,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Play recording',
-      button: true,
-      child: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: SizedBox(
-          width: 43,
-          height: 43,
-          child: Image.asset(
-            'assets/icons/play_button.png',
-            fit: BoxFit.contain,
-          ),
-        ),
-      ),
+    return GlowAssetButton(
+      assetPath: 'assets/icons/play_button.png',
+      semanticsLabel: 'Play recording',
+      onTap: onTap,
+      isActive: isActive,
+      size: 43,
+      glowBlur: 18,
+      glowSpread: 1.5,
     );
   }
 }

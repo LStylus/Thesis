@@ -52,6 +52,40 @@ class AuthController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> startAddChildForCurrentParent() async {
+    errorMessage = null;
+    _setLoading(true);
+
+    try {
+      final currentUser = _authService.currentUser;
+      if (currentUser == null) {
+        errorMessage = 'Please log in again to add another child.';
+        return false;
+      }
+
+      final parentInfo = await _userService.fetchParentAccount(currentUser.uid);
+      if (parentInfo == null || parentInfo.parentName.isEmpty) {
+        errorMessage = 'Could not find this guardian account.';
+        return false;
+      }
+
+      pendingUid = currentUser.uid;
+      _isExistingParentSession = true;
+      _draft = SignupDraftModel(
+        email: currentUser.email ?? parentInfo.email,
+        parentName: parentInfo.parentName,
+        relationshipToChild: parentInfo.relationshipToChild,
+      );
+
+      return true;
+    } catch (_) {
+      errorMessage = 'Could not prepare the child profile form.';
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   Future<bool> registerAccountStep1({
     required String email,
     required String password,
@@ -147,6 +181,16 @@ class AuthController extends ChangeNotifier {
       final birthDate = _draft.childBirthDate;
       if (birthDate == null) {
         errorMessage = 'Child birth date is required.';
+        return false;
+      }
+
+      final childNameAlreadyExists = await _userService.childNameExists(
+        userId: uid,
+        childName: _draft.childName,
+      );
+      if (childNameAlreadyExists) {
+        errorMessage =
+            'A child with this name already exists in this guardian account.';
         return false;
       }
 

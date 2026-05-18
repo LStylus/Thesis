@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
-import '../../controllers/auth_controller.dart';
 import '../../controllers/home_controller.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_fonts.dart';
 import '../../models/profile_model.dart';
 import '../../screens/gameplay/gameplay_screen.dart';
+import '../../widgets/profile_avatar.dart';
+import 'user_select_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -28,6 +30,8 @@ class _HomePageState extends State<HomePage>
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+    final homeController = context.read<HomeController>();
+    homeController.ensureCurrentUserProfileAssets();
     _motionController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 14),
@@ -93,8 +97,11 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
   late final ScrollController _scrollController;
   final Set<int> _completedIslandOneLevels = {};
   final Map<int, int> _islandOneAccuracyByLevel = {};
+  ProfileModel? _selectedProfileOverride;
   int _currentIsland = 0;
   int _unlockedIslandOneLevels = 1;
+
+  ProfileModel get _activeProfile => _selectedProfileOverride ?? widget.profile;
 
   List<_QuestProgress> get _quests {
     final completedCount = _completedIslandOneLevels.length;
@@ -127,6 +134,21 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
   }
 
   @override
+  void didUpdateWidget(covariant _OceanHomeView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.profile.profileId != widget.profile.profileId) {
+      _selectedProfileOverride = null;
+      _resetLocalProgress();
+      return;
+    }
+
+    if (_selectedProfileOverride?.profileId == widget.profile.profileId) {
+      _selectedProfileOverride = null;
+    }
+  }
+
+  @override
   void dispose() {
     _scrollController
       ..removeListener(_handleScroll)
@@ -150,12 +172,41 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
     }
   }
 
+  void _resetLocalProgress() {
+    _completedIslandOneLevels.clear();
+    _islandOneAccuracyByLevel.clear();
+    _currentIsland = 0;
+    _unlockedIslandOneLevels = 1;
+  }
+
+  Future<void> _openUserSelect(List<ProfileModel> profiles) async {
+    final activeProfile = _activeProfile;
+    final selectedProfile = await Navigator.of(context).push<ProfileModel>(
+      MaterialPageRoute(
+        builder: (_) => UserSelectPage(
+          activeProfile: activeProfile,
+          profiles: profiles,
+        ),
+      ),
+    );
+
+    if (!mounted || selectedProfile == null) return;
+
+    setState(() {
+      if (selectedProfile.profileId != _activeProfile.profileId) {
+        _resetLocalProgress();
+      }
+      _selectedProfileOverride = selectedProfile;
+    });
+  }
+
   void _showProgressSummary() {
+    final activeProfile = _activeProfile;
     showDialog<void>(
       context: context,
       builder: (context) {
         return _QuestSummaryDialog(
-          childName: widget.profile.childName,
+          childName: activeProfile.childName,
           quests: _quests,
         );
       },
@@ -163,10 +214,13 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
   }
 
   Future<void> _openGameplayLevel(int levelIndex) async {
+    final activeProfile = _activeProfile;
     final result = await Navigator.of(context).push<GameplayLevelResult>(
       MaterialPageRoute(
         builder: (_) => GameplayScreen(
-          childAge: widget.profile.age,
+          childProfileId: activeProfile.profileId,
+          childName: activeProfile.childName,
+          childAge: activeProfile.age,
           levelIndex: levelIndex,
         ),
       ),
@@ -187,6 +241,7 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
   @override
   Widget build(BuildContext context) {
     final padding = MediaQuery.paddingOf(context);
+    final activeProfile = _activeProfile;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -206,7 +261,18 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
             Positioned(
               top: padding.top + 12,
               left: 14,
-              child: _ProfileChip(profile: widget.profile),
+              child: StreamBuilder<List<ProfileModel>>(
+                stream: context.read<HomeController>().childProfilesStream(),
+                builder: (context, snapshot) {
+                  final profiles = snapshot.data?.isNotEmpty == true
+                      ? snapshot.data!
+                      : [activeProfile];
+                  return _ProfileChip(
+                    profile: activeProfile,
+                    onTap: () => _openUserSelect(profiles),
+                  );
+                },
+              ),
             ),
             Positioned(
               top: titleTop,
@@ -541,137 +607,87 @@ class _ScrollableOceanMap extends StatelessWidget {
 
 class _ProfileChip extends StatelessWidget {
   final ProfileModel profile;
+  final VoidCallback onTap;
 
-  const _ProfileChip({required this.profile});
-
-  void _showSignOutDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(
-                  'Sign Out',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF4B4B4B),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Are you sure you want to sign out?',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: AppColors.textGray,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        child: const Text(
-                          'Cancel',
-                          style: TextStyle(
-                            color: AppColors.textGray,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          context.read<AuthController>().signOut();
-                        },
-                        child: const Text(
-                          'Sign Out',
-                          style: TextStyle(fontWeight: FontWeight.w900),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  const _ProfileChip({required this.profile, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 48,
-      width: 148,
+      height: 58,
+      constraints: const BoxConstraints(minWidth: 168, maxWidth: 220),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showSignOutDialog(context),
-          borderRadius: BorderRadius.circular(24),
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(28),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(5, 5, 10, 5),
+            padding: const EdgeInsets.fromLTRB(7, 7, 12, 7),
             child: Row(
               children: [
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFF3B7),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.child_care_rounded,
-                    color: Color(0xFFFF8D39),
-                    size: 23,
+                ProfileAvatar(
+                  assetPath: profile.profileAssetPath,
+                  fallbackSeed: profile.profileId,
+                  size: 44,
+                  borderWidth: 2,
+                  borderColor: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 8,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'User Select',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontFamily: AppFonts.fredokaOne,
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        profile.childName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Color(0xFF4B4B4B),
+                          fontFamily: AppFonts.fredoka,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    profile.childName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF4B4B4B),
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+                const Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  color: AppColors.textGray,
+                  size: 22,
                 ),
               ],
             ),

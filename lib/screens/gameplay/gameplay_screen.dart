@@ -19,11 +19,15 @@ enum GameplayState {
 }
 
 class GameplayScreen extends StatefulWidget {
+  final String childProfileId;
+  final String childName;
   final int childAge;
   final int levelIndex;
 
   const GameplayScreen({
     super.key,
+    required this.childProfileId,
+    required this.childName,
     required this.childAge,
     required this.levelIndex,
   });
@@ -94,7 +98,7 @@ class _GameplayScreenState extends State<GameplayScreen> {
 
     final word = _currentWord;
     final recordingPath = await _recordingService.recordTimed(
-      fileNamePrefix: word.id,
+      fileNamePrefix: '${widget.childProfileId}_${word.id}',
     );
 
     if (!mounted || _state != GameplayState.recording) return;
@@ -159,7 +163,9 @@ class _GameplayScreenState extends State<GameplayScreen> {
   String get _bubbleText {
     switch (_state) {
       case GameplayState.intro:
-        return 'Get ready for Island 1.';
+        return widget.childName.trim().isEmpty
+            ? 'Get ready for Island 1.'
+            : 'Get ready, ${widget.childName}.';
       case GameplayState.asking:
       case GameplayState.recording:
         return 'Can you say ${_currentWord.displayWord}?';

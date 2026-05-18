@@ -42,6 +42,7 @@ flutter:
     - assets/characters/
     - assets/fonts/
     - assets/icons/
+    - assets/profiles/
     - assets/props/
 
   fonts:

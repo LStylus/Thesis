@@ -12,6 +12,7 @@ class ProfileModel {
   final String parentName;
   final String relationshipToChild;
   final String childName;
+  final String profileAssetPath;
 
   ProfileModel({
     required this.profileId,
@@ -24,9 +25,38 @@ class ProfileModel {
     required this.parentName,
     required this.relationshipToChild,
     required this.childName,
+    this.profileAssetPath = '',
   });
 
   int get age => calculateAge(birthDate);
+
+  ProfileModel copyWith({
+    String? profileId,
+    String? userId,
+    String? email,
+    String? progressId,
+    DateTime? birthDate,
+    String? categoryId,
+    String? courseNo,
+    String? parentName,
+    String? relationshipToChild,
+    String? childName,
+    String? profileAssetPath,
+  }) {
+    return ProfileModel(
+      profileId: profileId ?? this.profileId,
+      userId: userId ?? this.userId,
+      email: email ?? this.email,
+      progressId: progressId ?? this.progressId,
+      birthDate: birthDate ?? this.birthDate,
+      categoryId: categoryId ?? this.categoryId,
+      courseNo: courseNo ?? this.courseNo,
+      parentName: parentName ?? this.parentName,
+      relationshipToChild: relationshipToChild ?? this.relationshipToChild,
+      childName: childName ?? this.childName,
+      profileAssetPath: profileAssetPath ?? this.profileAssetPath,
+    );
+  }
 
   static int calculateAge(DateTime birthDate) {
     final today = DateTime.now();
@@ -61,6 +91,8 @@ class ProfileModel {
       'parentName': parentName,
       'relationshipToChild': relationshipToChild,
       'childName': childName,
+      'childNameNormalized': childName.trim().toLowerCase(),
+      'profileAssetPath': profileAssetPath,
       'profileComplete': true,
     };
   }
@@ -81,6 +113,7 @@ class ProfileModel {
       parentName: _stringValue(map['parentName']),
       relationshipToChild: _stringValue(map['relationshipToChild']),
       childName: _stringValue(map['childName']),
+      profileAssetPath: _stringValue(map['profileAssetPath']),
     );
   }
 
