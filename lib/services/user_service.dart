@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../core/constants/profile_assets.dart';
 import '../models/app_user_model.dart';
+import '../models/learning_report_model.dart';
 import '../models/profile_model.dart';
 
 class UserService {
@@ -217,6 +218,46 @@ class UserService {
       'activeChildAge': profile.age,
       'activeChildProfileAssetPath': profile.profileAssetPath,
       'childProfileIds': FieldValue.arrayUnion([profile.profileId]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Stream<LearningReportData> streamLearningReport({
+    required String userId,
+    required String profileId,
+  }) {
+    return _users
+        .doc(userId)
+        .collection('children')
+        .doc(profileId)
+        .snapshots()
+        .map((doc) => LearningReportData.fromChildMap(doc.data()));
+  }
+
+  Future<void> saveGameplayLevelScore({
+    required String userId,
+    required String profileId,
+    required int activityIndex,
+    required int levelIndex,
+    required int accuracy,
+  }) async {
+    final score = LearningReportLevelScore(
+      activityIndex: activityIndex,
+      levelIndex: levelIndex,
+      accuracy: accuracy,
+    );
+    final userRef = _users.doc(userId);
+    final childRef = userRef.collection('children').doc(profileId);
+
+    await childRef.set({
+      'learningReport': {
+        'levelScores': {
+          score.storageKey: score.toMap(
+            completedAtValue: FieldValue.serverTimestamp(),
+          ),
+        },
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
   }

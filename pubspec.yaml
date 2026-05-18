@@ -37,6 +37,8 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/audio/main_audio/main-content-audio/
+    - assets/audio/main_audio/prompt_voice/
     - assets/audio/screening/
     - assets/backgrounds/
     - assets/characters/

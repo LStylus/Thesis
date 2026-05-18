@@ -10,6 +10,7 @@ import '../../core/constants/app_fonts.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../models/screening_word_model.dart';
+import '../../widgets/countdown_mic_button.dart';
 import '../../widgets/glow_asset_button.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
@@ -352,10 +353,13 @@ class _ScreeningViewState extends State<_ScreeningView> {
               ),
             const SizedBox(width: 22),
             if (!hasRecording)
-              GlowAssetButton(
+              CountdownMicButton(
                 assetPath: AppAssets.microphoneButton,
-                semanticsLabel: 'Record word',
-                isActive: controller.isRecording,
+                label: controller.isRecording
+                    ? 'Recording ${controller.recordingCountdown}'
+                    : 'Record word',
+                progress: controller.recordingProgress,
+                showRing: controller.isRecording,
                 onTap: controller.canRecord
                     ? controller.startTimedRecording
                     : null,

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -8,9 +9,11 @@ import 'package:provider/provider.dart';
 import '../../controllers/home_controller.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
+import '../../models/learning_report_model.dart';
 import '../../models/profile_model.dart';
 import '../../screens/gameplay/gameplay_screen.dart';
 import '../../widgets/profile_avatar.dart';
+import '../../widgets/voyage_loading_screen.dart';
 import 'learning_report_page.dart';
 import 'user_select_page.dart';
 
@@ -24,6 +27,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   late final AnimationController _motionController;
+  Timer? _initialLoadingTimer;
+  bool _isInitialLoading = true;
 
   @override
   void initState() {
@@ -40,10 +45,17 @@ class _HomePageState extends State<HomePage>
       vsync: this,
       duration: const Duration(seconds: 14),
     )..repeat();
+    _initialLoadingTimer = Timer(const Duration(milliseconds: 850), () {
+      if (!mounted) return;
+      setState(() {
+        _isInitialLoading = false;
+      });
+    });
   }
 
   @override
   void dispose() {
+    _initialLoadingTimer?.cancel();
     SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
@@ -56,31 +68,32 @@ class _HomePageState extends State<HomePage>
   Widget build(BuildContext context) {
     final homeController = context.read<HomeController>();
 
-    return Scaffold(
-      body: StreamBuilder<ProfileModel?>(
-        stream: homeController.currentUserProfileStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _OceanShell(
-              animation: _motionController,
-              child: const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
-            );
-          }
+    if (_isInitialLoading) {
+      return const VoyageLoadingScreen();
+    }
 
-          final profile = snapshot.data;
+    return StreamBuilder<ProfileModel?>(
+      stream: homeController.currentUserProfileStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const VoyageLoadingScreen();
+        }
 
-          if (profile == null) {
-            return _OceanShell(
+        final profile = snapshot.data;
+
+        if (profile == null) {
+          return Scaffold(
+            body: _OceanShell(
               animation: _motionController,
               child: const Center(child: _EmptyProfileMessage()),
-            );
-          }
+            ),
+          );
+        }
 
-          return _OceanHomeView(profile: profile, animation: _motionController);
-        },
-      ),
+        return Scaffold(
+          body: _OceanHomeView(profile: profile, animation: _motionController),
+        );
+      },
     );
   }
 }
@@ -99,15 +112,29 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
   static const int _islandOneTotalLevels = 4;
 
   late final ScrollController _scrollController;
-  final Set<int> _completedIslandOneLevels = {};
+  final Map<int, int> _localIslandOneAccuracies = {};
   ProfileModel? _selectedProfileOverride;
   int _currentIsland = 0;
-  int _unlockedIslandOneLevels = 1;
 
   ProfileModel get _activeProfile => _selectedProfileOverride ?? widget.profile;
 
-  List<_QuestProgress> get _quests {
-    final completedCount = _completedIslandOneLevels.length;
+  LearningReportData get _localReportData {
+    return LearningReportData(
+      levelScores: _localIslandOneAccuracies.entries
+          .map(
+            (entry) => LearningReportLevelScore(
+              activityIndex: 0,
+              levelIndex: entry.key,
+              accuracy: entry.value,
+              completedAt: DateTime.now(),
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  List<_QuestProgress> _questsFor(LearningReportData reportData) {
+    final completedCount = reportData.completedLevelsForActivity(0).length;
 
     return [
       _QuestProgress(
@@ -169,9 +196,8 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
   }
 
   void _resetLocalProgress() {
-    _completedIslandOneLevels.clear();
+    _localIslandOneAccuracies.clear();
     _currentIsland = 0;
-    _unlockedIslandOneLevels = 1;
   }
 
   Future<void> _openUserSelect(List<ProfileModel> profiles) async {
@@ -195,28 +221,80 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
     });
   }
 
-  LearningReportMetrics get _reportMetrics {
-    final completedLevels = _completedIslandOneLevels.length;
+  LearningReportMetrics _reportMetricsFor(LearningReportData reportData) {
+    final completedLevels = reportData.completedLevelCount;
 
     return LearningReportMetrics(
-      activities: _quests.length,
-      minutes: completedLevels == 0 ? 10 : completedLevels * 5,
-      words: completedLevels == 0 ? 4 : completedLevels,
-      levels: completedLevels == 0 ? 6 : completedLevels,
+      activities: 2,
+      minutes: reportData.practiceMinutes,
+      words: reportData.learnedWordCount,
+      levels: completedLevels,
+      averageAccuracy: reportData.averageAccuracy,
     );
   }
 
-  Future<void> _openLearningReport() {
-    final activeProfile = _activeProfile;
+  int _unlockedIslandOneLevelsFor(LearningReportData reportData) {
+    final completedLevels = reportData.completedLevelsForActivity(0);
+    if (completedLevels.isEmpty) return 1;
+    final highestCompletedLevel = completedLevels.reduce(math.max);
+    return math.min(_islandOneTotalLevels, highestCompletedLevel + 2);
+  }
 
-    return Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => LearningReportPage(
-          profile: activeProfile,
-          thisWeek: _reportMetrics,
-          overall: _reportMetrics,
+  Future<void> _showLoadingTransition({
+    required List<DeviceOrientation> orientations,
+  }) async {
+    final navigator = Navigator.of(context);
+    unawaited(
+      navigator.push<void>(
+        PageRouteBuilder(
+          opaque: true,
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+          pageBuilder: (_, _, _) => const VoyageLoadingScreen(),
         ),
       ),
+    );
+
+    await Future<void>.delayed(const Duration(milliseconds: 40));
+    await SystemChrome.setPreferredOrientations(orientations);
+    await Future<void>.delayed(const Duration(milliseconds: 760));
+
+    if (!mounted) return;
+    navigator.pop();
+  }
+
+  Future<void> _openLearningReport(LearningReportData reportData) async {
+    final activeProfile = _activeProfile;
+    final reportMetrics = _reportMetricsFor(reportData);
+
+    await _showLoadingTransition(
+      orientations: const [
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ],
+    );
+
+    if (!mounted) return;
+
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => LearningReportPage(
+          profile: activeProfile,
+          thisWeek: reportMetrics,
+          overall: reportMetrics,
+          reportData: reportData,
+        ),
+      ),
+    );
+
+    if (!mounted) return;
+
+    await _showLoadingTransition(
+      orientations: const [
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ],
     );
   }
 
@@ -236,12 +314,19 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
     if (!mounted || result == null || !result.correct) return;
 
     setState(() {
-      _completedIslandOneLevels.add(result.levelIndex);
-      _unlockedIslandOneLevels = math.min(
-        _islandOneTotalLevels,
-        math.max(_unlockedIslandOneLevels, result.levelIndex + 2),
-      );
+      _localIslandOneAccuracies[result.levelIndex] = result.accuracy;
     });
+
+    context
+        .read<HomeController>()
+        .saveGameplayLevelScore(
+          profile: activeProfile,
+          levelIndex: result.levelIndex,
+          accuracy: result.accuracy,
+        )
+        .catchError((error) {
+          debugPrint('Saving gameplay level score failed: $error');
+        });
   }
 
   @override
@@ -249,73 +334,87 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
     final padding = MediaQuery.paddingOf(context);
     final activeProfile = _activeProfile;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final compact = constraints.maxWidth < 720;
-        final titleTop = padding.top + (compact ? 76.0 : 26.0);
-        final currentQuest = _quests[_currentIsland];
+    return StreamBuilder<LearningReportData>(
+      stream: context.read<HomeController>().learningReportStream(activeProfile),
+      builder: (context, snapshot) {
+        final reportData = (snapshot.data ?? LearningReportData.empty).merge(
+          _localReportData,
+        );
+        final quests = _questsFor(reportData);
+        final currentQuest = quests[_currentIsland.clamp(0, quests.length - 1)];
+        final completedIslandOneLevels = reportData.completedLevelsForActivity(0);
+        final unlockedIslandOneLevels = _unlockedIslandOneLevelsFor(reportData);
 
-        return Stack(
-          children: [
-            _ScrollableOceanMap(
-              animation: widget.animation,
-              scrollController: _scrollController,
-              unlockedIslandOneLevels: _unlockedIslandOneLevels,
-              completedIslandOneLevels: _completedIslandOneLevels,
-              onStartGameplay: _openGameplayLevel,
-            ),
-            Positioned(
-              top: padding.top + (compact ? 18 : 30),
-              left: compact ? 18 : 40,
-              child: StreamBuilder<List<ProfileModel>>(
-                stream: context.read<HomeController>().childProfilesStream(),
-                builder: (context, snapshot) {
-                  final profiles = snapshot.data?.isNotEmpty == true
-                      ? snapshot.data!
-                      : [activeProfile];
-                  return _ProfileChip(
-                    profile: activeProfile,
-                    onTap: () => _openUserSelect(profiles),
-                  );
-                },
-              ),
-            ),
-            Positioned(
-              top: titleTop,
-              left: compact ? 92 : 0,
-              right: compact ? 92 : 0,
-              child: _LessonTitle(title: currentQuest.title),
-            ),
-            Positioned(
-              top: padding.top + (compact ? 18 : 30),
-              right: compact ? 18 : 58,
-              child: _ProgressBadge(
-                quest: currentQuest,
-                onTap: _openLearningReport,
-              ),
-            ),
-            Positioned(
-              left: compact ? 18 : 40,
-              bottom: padding.bottom + 24,
-              child: _MapIconButton(
-                assetPath: 'assets/icons/learning_report_button.svg',
-                label: 'Learning report',
-                width: 50,
-                height: 50,
-                onTap: _openLearningReport,
-              ),
-            ),
-            Positioned(
-              right: compact ? 18 : 58,
-              bottom: padding.bottom + 24,
-              child: const _MapIconButton(
-                assetPath: 'assets/icons/customize_button.svg',
-                label: 'Customize',
-                width: 63,
-                height: 73,
-              ),
-            ),
-          ],
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final compact = constraints.maxWidth < 720;
+            final titleTop = padding.top + (compact ? 76.0 : 26.0);
+
+            return Stack(
+              children: [
+                _ScrollableOceanMap(
+                  animation: widget.animation,
+                  scrollController: _scrollController,
+                  unlockedIslandOneLevels: unlockedIslandOneLevels,
+                  completedIslandOneLevels: completedIslandOneLevels,
+                  onStartGameplay: _openGameplayLevel,
+                ),
+                Positioned(
+                  top: padding.top + (compact ? 18 : 30),
+                  left: compact ? 18 : 40,
+                  child: StreamBuilder<List<ProfileModel>>(
+                    stream: context.read<HomeController>().childProfilesStream(),
+                    builder: (context, snapshot) {
+                      final profiles = snapshot.data?.isNotEmpty == true
+                          ? snapshot.data!
+                          : [activeProfile];
+                      return _ProfileChip(
+                        profile: activeProfile,
+                        onTap: () => _openUserSelect(profiles),
+                      );
+                    },
+                  ),
+                ),
+                Positioned(
+                  top: titleTop,
+                  left: compact ? 92 : 0,
+                  right: compact ? 92 : 0,
+                  child: _LessonTitle(title: currentQuest.title),
+                ),
+                Positioned(
+                  top: padding.top + (compact ? 18 : 30),
+                  right: compact ? 18 : 58,
+                  child: _ProgressBadge(
+                    quest: currentQuest,
+                    activityNumber: _currentIsland + 1,
+                    activityCount: quests.length,
+                    onTap: () => _openLearningReport(reportData),
+                  ),
+                ),
+                Positioned(
+                  left: compact ? 18 : 40,
+                  bottom: padding.bottom + 24,
+                  child: _MapIconButton(
+                    assetPath: 'assets/icons/learning_report_button.svg',
+                    label: 'Learning report',
+                    width: 50,
+                    height: 50,
+                    onTap: () => _openLearningReport(reportData),
+                  ),
+                ),
+                Positioned(
+                  right: compact ? 18 : 58,
+                  bottom: padding.bottom + 24,
+                  child: const _MapIconButton(
+                    assetPath: 'assets/icons/customize_button.svg',
+                    label: 'Customize',
+                    width: 63,
+                    height: 73,
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -663,23 +762,24 @@ class _QuestProgress {
 
 class _ProgressBadge extends StatelessWidget {
   final _QuestProgress quest;
+  final int activityNumber;
+  final int activityCount;
   final VoidCallback onTap;
 
   const _ProgressBadge({
     required this.quest,
+    required this.activityNumber,
+    required this.activityCount,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final currentLevel = math.min(
-      quest.totalLevels,
-      math.max(1, quest.levelsDone + 1),
-    );
+    final currentActivity = activityNumber.clamp(1, activityCount);
 
     return Semantics(
       label:
-          '${quest.title} progress $currentLevel of ${quest.totalLevels} levels',
+          '${quest.title} progress $currentActivity of $activityCount activities',
       button: true,
       child: GestureDetector(
         onTap: onTap,
@@ -728,7 +828,7 @@ class _ProgressBadge extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Text(
-                    '$currentLevel/${quest.totalLevels}\nLevels',
+                    '$currentActivity/$activityCount\nActivity',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
@@ -814,9 +914,6 @@ class _LessonMapNode extends StatelessWidget {
         ? 'assets/props/treasure.svg'
         : 'assets/props/flag.svg';
     final visualSize = kind == _LessonNodeKind.chest ? size * 0.86 : size;
-    final lockedFilter = locked
-        ? const ColorFilter.mode(Color(0xFF161616), BlendMode.srcIn)
-        : null;
 
     return Positioned(
       left: left,
@@ -845,12 +942,14 @@ class _LessonMapNode extends StatelessWidget {
             child: Stack(
               alignment: Alignment.center,
               children: [
-                SvgPicture.asset(
-                  assetPath,
-                  width: visualSize,
-                  height: visualSize,
-                  fit: BoxFit.contain,
-                  colorFilter: lockedFilter,
+                Opacity(
+                  opacity: locked ? 0.6 : 1,
+                  child: SvgPicture.asset(
+                    assetPath,
+                    width: visualSize,
+                    height: visualSize,
+                    fit: BoxFit.contain,
+                  ),
                 ),
                 if (completed)
                   Positioned(

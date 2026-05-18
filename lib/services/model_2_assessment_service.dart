@@ -21,7 +21,7 @@ class Model2AssessmentService {
   static String get defaultBaseUrl {
     if (_definedBaseUrl.isNotEmpty) return _definedBaseUrl;
     if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'https://wystan28-phonememodel.hf.space';
+      return 'https://wystan28-PhonemeRecognizer.hf.space';
     }
     return 'http://127.0.0.1:8001';
   }
@@ -134,9 +134,7 @@ class Model2AssessmentService {
         error: 'Model-2 request timed out.',
       );
     } on SocketException {
-      debugPrint(
-        '[model-api] socket_error word_id=${word.id} uri=$_assessUri',
-      );
+      debugPrint('[model-api] socket_error word_id=${word.id} uri=$_assessUri');
       return Model2AssessmentResult.failure(
         word: word,
         recordingPath: recordingPath,
@@ -150,7 +148,9 @@ class Model2AssessmentService {
         error: 'Model-2 returned an invalid response.',
       );
     } catch (error) {
-      debugPrint('[model-api] unexpected_error word_id=${word.id} error=$error');
+      debugPrint(
+        '[model-api] unexpected_error word_id=${word.id} error=$error',
+      );
       return Model2AssessmentResult.failure(
         word: word,
         recordingPath: recordingPath,
@@ -281,16 +281,18 @@ class Model2AssessmentResult {
   String get detectedProcessSummary {
     if (detectedProcesses.isEmpty) return 'No detected process';
 
-    return detectedProcesses.map((process) {
-      final name = process['process']?.toString() ?? 'Unknown process';
-      final position = process['position']?.toString();
-      final detail = process['detail']?.toString();
+    return detectedProcesses
+        .map((process) {
+          final name = process['process']?.toString() ?? 'Unknown process';
+          final position = process['position']?.toString();
+          final detail = process['detail']?.toString();
 
-      final parts = <String>[name];
-      if (position != null && position.isNotEmpty) parts.add(position);
-      if (detail != null && detail.isNotEmpty) parts.add(detail);
-      return parts.join(' - ');
-    }).join(', ');
+          final parts = <String>[name];
+          if (position != null && position.isNotEmpty) parts.add(position);
+          if (detail != null && detail.isNotEmpty) parts.add(detail);
+          return parts.join(' - ');
+        })
+        .join(', ');
   }
 
   Map<String, dynamic> toJson() {

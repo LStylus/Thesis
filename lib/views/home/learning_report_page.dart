@@ -1,10 +1,9 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
+import '../../models/learning_report_model.dart';
 import '../../models/profile_model.dart';
 import '../../widgets/profile_avatar.dart';
 
@@ -13,12 +12,14 @@ class LearningReportMetrics {
   final int minutes;
   final int words;
   final int levels;
+  final int? averageAccuracy;
 
   const LearningReportMetrics({
     required this.activities,
     required this.minutes,
     required this.words,
     required this.levels,
+    this.averageAccuracy,
   });
 }
 
@@ -26,12 +27,14 @@ class LearningReportPage extends StatefulWidget {
   final ProfileModel profile;
   final LearningReportMetrics thisWeek;
   final LearningReportMetrics overall;
+  final LearningReportData reportData;
 
   const LearningReportPage({
     super.key,
     required this.profile,
     required this.thisWeek,
     required this.overall,
+    required this.reportData,
   });
 
   @override
@@ -39,7 +42,6 @@ class LearningReportPage extends StatefulWidget {
 }
 
 class _LearningReportPageState extends State<LearningReportPage> {
-  static const Color _screenGray = Color(0xFFD3D3D3);
   static const Color _cardBorder = Color(0xFFEDEDED);
   static const Color _darkText = Color(0xFF4D4D4D);
   static const Color _mutedText = Color(0xFF8D8D8D);
@@ -54,83 +56,79 @@ class _LearningReportPageState extends State<LearningReportPage> {
   }
 
   @override
-  void dispose() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
-        statusBarColor: _screenGray,
-        systemNavigationBarColor: _screenGray,
+        statusBarColor: Colors.white,
+        systemNavigationBarColor: Colors.white,
       ),
       child: Scaffold(
-        backgroundColor: _screenGray,
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final panelWidth = math.min(constraints.maxWidth - 40, 300.0);
-              final safePanelWidth = math.max(panelWidth, 248.0);
-              final panelHeight = math.max(constraints.maxHeight - 38, 560.0);
+              final horizontalPadding = constraints.maxWidth < 420 ? 20.0 : 32.0;
 
-              return Stack(
+              return Column(
                 children: [
-                  const Positioned(
-                    top: 6,
-                    left: 20,
-                    child: Text(
-                      'progress',
-                      style: TextStyle(
-                        color: Color(0xFF747474),
-                        fontFamily: AppFonts.fredoka,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 0,
-                      ),
+                  SizedBox(
+                    height: 48,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        const Text(
+                          'Learning Report',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontFamily: AppFonts.fredokaOne,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w400,
+                            height: 1.1,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                        Positioned(
+                          left: horizontalPadding - 6,
+                          child: IconButton(
+                            onPressed: () => Navigator.of(context).maybePop(),
+                            icon: const Icon(
+                              Icons.close_rounded,
+                              color: Color(0xFFCFCFCF),
+                              size: 26,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Positioned.fill(
-                    top: 26,
-                    bottom: 10,
-                    child: Center(
-                      child: SingleChildScrollView(
-                        child: Container(
-                          width: safePanelWidth,
-                          constraints: BoxConstraints(minHeight: panelHeight),
-                          color: Colors.white,
-                          padding: const EdgeInsets.fromLTRB(17, 12, 17, 18),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        8,
+                        horizontalPadding,
+                        22,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 520),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              const Text(
-                                'Learning Report',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontFamily: AppFonts.fredokaOne,
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w400,
-                                  height: 1.1,
-                                  letterSpacing: 0,
-                                ),
-                              ),
-                              const SizedBox(height: 15),
                               _ProfileHeader(profile: widget.profile),
-                              const SizedBox(height: 17),
+                              const SizedBox(height: 18),
                               _ReportCard(
                                 title: 'This Week',
                                 child: _MetricsGrid(metrics: widget.thisWeek),
                               ),
                               const SizedBox(height: 16),
-                              const _ReportCard(
-                                title: 'Phonological Process',
-                                minContentHeight: 73,
-                                child: SizedBox.shrink(),
+                              _ReportCard(
+                                title: 'Level Scores',
+                                minContentHeight: 92,
+                                child: _LevelScoresList(
+                                  scores: widget.reportData.levelScores,
+                                ),
                               ),
                               const SizedBox(height: 16),
                               _ReportCard(
@@ -154,8 +152,9 @@ class _LearningReportPageState extends State<LearningReportPage> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(height: 14),
+                              const SizedBox(height: 18),
                               _PlayButton(
+                                label: 'Back to Map',
                                 onPressed: () =>
                                     Navigator.of(context).maybePop(),
                               ),
@@ -357,8 +356,9 @@ class _MetricsGrid extends StatelessWidget {
             Expanded(
               child: _MetricItem(
                 color: const Color(0xFFFFC928),
-                label: 'Levels',
-                value: metrics.levels,
+                label: metrics.averageAccuracy == null ? 'Levels' : 'Accuracy',
+                value: metrics.averageAccuracy ?? metrics.levels,
+                suffix: metrics.averageAccuracy == null ? '' : '%',
               ),
             ),
           ],
@@ -372,11 +372,13 @@ class _MetricItem extends StatelessWidget {
   final Color color;
   final String label;
   final int value;
+  final String suffix;
 
   const _MetricItem({
     required this.color,
     required this.label,
     required this.value,
+    this.suffix = '',
   });
 
   @override
@@ -412,7 +414,7 @@ class _MetricItem extends StatelessWidget {
                 ),
               ),
               Text(
-                '$value',
+                '$value$suffix',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
@@ -432,10 +434,96 @@ class _MetricItem extends StatelessWidget {
   }
 }
 
+class _LevelScoresList extends StatelessWidget {
+  final List<LearningReportLevelScore> scores;
+
+  const _LevelScoresList({required this.scores});
+
+  @override
+  Widget build(BuildContext context) {
+    if (scores.isEmpty) {
+      return const Center(
+        child: Text(
+          'No completed levels yet.',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _LearningReportPageState._mutedText,
+            fontFamily: AppFonts.fredoka,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0,
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        for (final score in scores) ...[
+          _LevelScoreRow(score: score),
+          if (score != scores.last)
+            const Divider(height: 13, thickness: 0.7, color: Color(0xFFEDEDED)),
+        ],
+      ],
+    );
+  }
+}
+
+class _LevelScoreRow extends StatelessWidget {
+  final LearningReportLevelScore score;
+
+  const _LevelScoreRow({required this.score});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            'Activity ${score.activityIndex + 1} - Level ${score.levelIndex + 1}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _LearningReportPageState._darkText,
+              fontFamily: AppFonts.fredoka,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              height: 1,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+        Container(
+          height: 25,
+          constraints: const BoxConstraints(minWidth: 58),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(999),
+          ),
+          child: Text(
+            '${score.accuracy}%',
+            style: const TextStyle(
+              color: AppColors.primary,
+              fontFamily: AppFonts.fredokaOne,
+              fontSize: 12,
+              fontWeight: FontWeight.w400,
+              height: 1,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _PlayButton extends StatelessWidget {
+  final String label;
   final VoidCallback onPressed;
 
-  const _PlayButton({required this.onPressed});
+  const _PlayButton({required this.label, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -456,12 +544,12 @@ class _PlayButton extends StatelessWidget {
         child: InkWell(
           onTap: onPressed,
           borderRadius: BorderRadius.circular(24),
-          child: const SizedBox(
+          child: SizedBox(
             height: 39,
             child: Center(
               child: Text(
-                'Play',
-                style: TextStyle(
+                label,
+                style: const TextStyle(
                   color: Colors.white,
                   fontFamily: AppFonts.fredokaOne,
                   fontSize: 14,

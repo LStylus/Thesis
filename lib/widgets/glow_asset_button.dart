@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../core/constants/app_colors.dart';
-
 class GlowAssetButton extends StatelessWidget {
   final String assetPath;
   final String semanticsLabel;
@@ -10,6 +8,7 @@ class GlowAssetButton extends StatelessWidget {
   final double size;
   final double glowBlur;
   final double glowSpread;
+  final double disabledOpacity;
 
   const GlowAssetButton({
     super.key,
@@ -20,6 +19,7 @@ class GlowAssetButton extends StatelessWidget {
     this.size = 68,
     this.glowBlur = 22,
     this.glowSpread = 2,
+    this.disabledOpacity = 0.45,
   });
 
   @override
@@ -40,15 +40,20 @@ class GlowAssetButton extends StatelessWidget {
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.56),
+                      color: const Color(0xFF64E7FF).withValues(alpha: 0.84),
                       blurRadius: glowBlur,
                       spreadRadius: glowSpread,
+                    ),
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.5),
+                      blurRadius: glowBlur * 0.42,
+                      spreadRadius: 0,
                     ),
                   ]
                 : const [],
           ),
           child: Opacity(
-            opacity: onTap == null ? 0.45 : 1,
+            opacity: onTap == null && !isActive ? disabledOpacity : 1,
             child: SizedBox(
               width: size,
               height: size,

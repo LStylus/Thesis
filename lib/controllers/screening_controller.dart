@@ -29,9 +29,12 @@ class ScreeningController extends ChangeNotifier {
   bool isProcessing = false;
   bool hasMicPermission = false;
   bool isRecorderReady = false;
+  double recordingProgress = 0;
+  int recordingCountdown = _autoRecordDuration.inSeconds;
 
   bool _isInitializingRecorder = false;
   int _recordingAttempt = 0;
+  Timer? _recordingProgressTimer;
 
   String? errorMessage;
 
@@ -157,6 +160,8 @@ class ScreeningController extends ChangeNotifier {
 
     clearError();
     isProcessing = true;
+    recordingProgress = 0;
+    recordingCountdown = _autoRecordDuration.inSeconds;
     notifyListeners();
 
     final word = currentWord;
@@ -168,16 +173,22 @@ class ScreeningController extends ChangeNotifier {
 
       isRecording = true;
       isProcessing = false;
+      recordingProgress = 0;
+      recordingCountdown = _autoRecordDuration.inSeconds;
       notifyListeners();
+      _startRecordingProgressTimer();
 
       final recordingPath = await _recordingService.recordTimed(
         fileNamePrefix: wordId,
         duration: _autoRecordDuration,
       );
 
+      _stopRecordingProgressTimer();
+
       if (attempt != _recordingAttempt) return;
 
       isRecording = false;
+      recordingProgress = 1;
       hasMicPermission = _recordingService.hasMicPermission;
       isRecorderReady = _recordingService.isRecorderReady;
 
@@ -228,17 +239,47 @@ class ScreeningController extends ChangeNotifier {
       } else {
         errorMessage =
             'Recording was not saved as a valid WAV. Please try again.';
+        recordingProgress = 0;
+        recordingCountdown = _autoRecordDuration.inSeconds;
         debugPrint('[screening] recording_failed word_id=$wordId');
       }
 
       notifyListeners();
     } catch (e) {
+      _stopRecordingProgressTimer();
       isRecording = false;
       isProcessing = false;
+      recordingProgress = 0;
+      recordingCountdown = _autoRecordDuration.inSeconds;
       errorMessage = 'Unable to start recording: $e';
       debugPrint('[screening] record_error word_id=$wordId error=$e');
       notifyListeners();
     }
+  }
+
+  void _startRecordingProgressTimer() {
+    _stopRecordingProgressTimer();
+    final startedAt = DateTime.now();
+    _recordingProgressTimer = Timer.periodic(
+      const Duration(milliseconds: 50),
+      (_) {
+        final elapsed = DateTime.now().difference(startedAt);
+        final progress =
+            elapsed.inMilliseconds / _autoRecordDuration.inMilliseconds;
+        final remaining = _autoRecordDuration - elapsed;
+
+        recordingProgress = progress.clamp(0, 1).toDouble();
+        recordingCountdown = remaining.inMilliseconds <= 0
+            ? 0
+            : (remaining.inMilliseconds / 1000).ceil();
+        notifyListeners();
+      },
+    );
+  }
+
+  void _stopRecordingProgressTimer() {
+    _recordingProgressTimer?.cancel();
+    _recordingProgressTimer = null;
   }
 
   Future<void> stopRecording() async {
@@ -246,7 +287,9 @@ class ScreeningController extends ChangeNotifier {
 
     try {
       final finalPath = await _recordingService.stopAndVerify();
+      _stopRecordingProgressTimer();
       isRecording = false;
+      recordingProgress = 1;
 
       if (finalPath != null && finalPath.isNotEmpty) {
         final file = File(finalPath);
@@ -270,7 +313,10 @@ class ScreeningController extends ChangeNotifier {
 
       notifyListeners();
     } catch (e) {
+      _stopRecordingProgressTimer();
       isRecording = false;
+      recordingProgress = 0;
+      recordingCountdown = _autoRecordDuration.inSeconds;
       errorMessage = 'Failed to stop recording: $e';
       notifyListeners();
     }
@@ -294,6 +340,8 @@ class ScreeningController extends ChangeNotifier {
 
       _recordingsByWordId.remove(currentWord.id);
       _assessmentResultsByWordId.remove(currentWord.id);
+      recordingProgress = 0;
+      recordingCountdown = _autoRecordDuration.inSeconds;
       errorMessage = null;
       notifyListeners();
     } catch (_) {
@@ -370,12 +418,15 @@ class ScreeningController extends ChangeNotifier {
     } catch (_) {
       // ignore cleanup errors
     } finally {
+      _stopRecordingProgressTimer();
       _recordingsByWordId.clear();
       _assessmentResultsByWordId.clear();
       _currentIndex = 0;
       isRecording = false;
       isPromptPlaying = false;
       isProcessing = false;
+      recordingProgress = 0;
+      recordingCountdown = _autoRecordDuration.inSeconds;
       errorMessage = null;
       notifyListeners();
     }
@@ -384,6 +435,7 @@ class ScreeningController extends ChangeNotifier {
   @override
   void dispose() {
     _recordingAttempt++;
+    _stopRecordingProgressTimer();
     _playerStateSub?.cancel();
     _player.dispose();
     unawaited(_recordingService.dispose());
