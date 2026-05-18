@@ -291,8 +291,6 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
               right: compact ? 18 : 58,
               child: _ProgressBadge(
                 quest: currentQuest,
-                activityNumber: _currentIsland + 1,
-                activityCount: _quests.length,
                 onTap: _openLearningReport,
               ),
             ),
@@ -417,82 +415,83 @@ class _ScrollableOceanMap extends StatelessWidget {
                             ),
                           ),
                         ),
-                        _LessonSandNode(
+                        _LessonMapNode(
                           animation: animation,
                           left: x(250),
                           top: y(233),
                           size: s(65),
-                          active: isIslandOneUnlocked(0),
+                          unlocked: isIslandOneUnlocked(0),
                           locked: !isIslandOneUnlocked(0),
                           completed: completedIslandOneLevels.contains(0),
                           onTap: isIslandOneUnlocked(0)
                               ? () => onStartGameplay?.call(0)
                               : null,
                         ),
-                        _LessonSandNode(
+                        _LessonMapNode(
                           animation: animation,
                           left: x(380),
                           top: y(163),
                           size: s(65),
-                          active: isIslandOneUnlocked(1),
+                          unlocked: isIslandOneUnlocked(1),
                           locked: !isIslandOneUnlocked(1),
                           completed: completedIslandOneLevels.contains(1),
                           onTap: isIslandOneUnlocked(1)
                               ? () => onStartGameplay?.call(1)
                               : null,
                         ),
-                        _LessonSandNode(
+                        _LessonMapNode(
                           animation: animation,
                           left: x(548),
                           top: y(200),
                           size: s(65),
-                          active: isIslandOneUnlocked(2),
+                          unlocked: isIslandOneUnlocked(2),
                           locked: !isIslandOneUnlocked(2),
                           completed: completedIslandOneLevels.contains(2),
                           onTap: isIslandOneUnlocked(2)
                               ? () => onStartGameplay?.call(2)
                               : null,
                         ),
-                        _LessonSandNode(
+                        _LessonMapNode(
                           animation: animation,
                           left: x(767),
                           top: y(215),
                           size: s(65),
-                          active: isIslandOneUnlocked(3),
+                          kind: _LessonNodeKind.chest,
+                          unlocked: isIslandOneUnlocked(3),
                           locked: !isIslandOneUnlocked(3),
                           completed: completedIslandOneLevels.contains(3),
                           onTap: isIslandOneUnlocked(3)
                               ? () => onStartGameplay?.call(3)
                               : null,
                         ),
-                        _LessonSandNode(
+                        _LessonMapNode(
                           animation: animation,
                           left: x(1323),
                           top: y(237),
                           size: s(65),
                           locked: true,
                         ),
-                        _LessonSandNode(
+                        _LessonMapNode(
                           animation: animation,
                           left: x(1464),
                           top: y(180),
                           size: s(65),
                           locked: true,
                         ),
-                        _LessonSandNode(
+                        _LessonMapNode(
                           animation: animation,
                           left: x(1618),
                           top: y(231),
                           size: s(65),
                           locked: true,
                         ),
-                        _LessonSandNode(
+                        _LessonMapNode(
                           animation: animation,
                           left: x(1835),
                           top: y(241),
                           size: s(65),
+                          kind: _LessonNodeKind.chest,
                           locked: true,
-                          showStar: true,
                         ),
                       ],
                     ),
@@ -664,24 +663,23 @@ class _QuestProgress {
 
 class _ProgressBadge extends StatelessWidget {
   final _QuestProgress quest;
-  final int activityNumber;
-  final int activityCount;
   final VoidCallback onTap;
 
   const _ProgressBadge({
     required this.quest,
-    required this.activityNumber,
-    required this.activityCount,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final currentActivity = activityNumber.clamp(1, activityCount);
+    final currentLevel = math.min(
+      quest.totalLevels,
+      math.max(1, quest.levelsDone + 1),
+    );
 
     return Semantics(
       label:
-          '${quest.title} progress $currentActivity of $activityCount activities',
+          '${quest.title} progress $currentLevel of ${quest.totalLevels} levels',
       button: true,
       child: GestureDetector(
         onTap: onTap,
@@ -730,7 +728,7 @@ class _ProgressBadge extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Text(
-                    '$currentActivity/$activityCount\nActivity',
+                    '$currentLevel/${quest.totalLevels}\nLevels',
                     textAlign: TextAlign.center,
                     style: const TextStyle(
                       color: Colors.white,
@@ -785,73 +783,75 @@ class _MapIconButton extends StatelessWidget {
   }
 }
 
-class _LessonSandNode extends StatelessWidget {
+enum _LessonNodeKind { flag, chest }
+
+class _LessonMapNode extends StatelessWidget {
   final Animation<double> animation;
   final double left;
   final double top;
   final double size;
-  final bool active;
+  final _LessonNodeKind kind;
+  final bool unlocked;
   final bool locked;
   final bool completed;
-  final bool showStar;
   final VoidCallback? onTap;
 
-  const _LessonSandNode({
+  const _LessonMapNode({
     required this.animation,
     required this.left,
     required this.top,
     required this.size,
-    this.active = false,
+    this.kind = _LessonNodeKind.flag,
+    this.unlocked = false,
     this.locked = false,
     this.completed = false,
-    this.showStar = false,
     this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final assetPath = kind == _LessonNodeKind.chest
+        ? 'assets/props/treasure.svg'
+        : 'assets/props/flag.svg';
+    final visualSize = kind == _LessonNodeKind.chest ? size * 0.86 : size;
+    final lockedFilter = locked
+        ? const ColorFilter.mode(Color(0xFF161616), BlendMode.srcIn)
+        : null;
+
     return Positioned(
       left: left,
-      top: top,
+      top: top - size * 0.12,
       width: size,
       height: size,
       child: AnimatedBuilder(
         animation: animation,
         builder: (context, child) {
-          final wave = math.sin((animation.value + left / 1000) * math.pi * 2);
-          final pulse = active ? 1 + (wave * 0.04) : 1.0;
+          final wave = math.sin(
+            (animation.value * math.pi * 14) + left / 140,
+          );
+          final bounce = unlocked && !locked ? wave : 0.0;
+          final pulse = unlocked && !locked ? 1 + (bounce * 0.035) : 1.0;
 
-          return Transform.scale(scale: pulse, child: child);
+          return Transform.translate(
+            offset: Offset(0, -4 * bounce),
+            child: Transform.scale(scale: pulse, child: child),
+          );
         },
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: locked ? null : onTap,
-            customBorder: const CircleBorder(),
+            borderRadius: BorderRadius.circular(size * 0.18),
             child: Stack(
               alignment: Alignment.center,
               children: [
-                if (active && !showStar && !locked)
-                  Image.asset(
-                    'assets/icons/play_button.png',
-                    width: size * 0.72,
-                    height: size * 0.72,
-                    fit: BoxFit.contain,
-                    filterQuality: FilterQuality.medium,
-                  ),
-                if (showStar)
-                  Icon(
-                    Icons.star_rounded,
-                    color: const Color(0xFFFFC400),
-                    size: size * 0.9,
-                    shadows: [
-                      Shadow(
-                        color: Colors.black.withValues(alpha: 0.14),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
+                SvgPicture.asset(
+                  assetPath,
+                  width: visualSize,
+                  height: visualSize,
+                  fit: BoxFit.contain,
+                  colorFilter: lockedFilter,
+                ),
                 if (completed)
                   Positioned(
                     right: size * 0.08,
@@ -868,56 +868,6 @@ class _LessonSandNode extends StatelessWidget {
                         Icons.check_rounded,
                         color: Colors.white,
                         size: size * 0.2,
-                      ),
-                    ),
-                  ),
-                if (locked && !showStar)
-                  Container(
-                    width: size * 0.74,
-                    height: size * 0.74,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.94),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      Icons.lock_rounded,
-                      color: const Color(0xFFC6C6C6),
-                      size: size * 0.4,
-                    ),
-                  ),
-                if (locked && showStar)
-                  Positioned(
-                    right: size * 0.06,
-                    bottom: size * 0.08,
-                    child: Container(
-                      width: size * 0.28,
-                      height: size * 0.28,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: const Color(0xFFFFC400),
-                          width: 1.5,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.16),
-                            blurRadius: 3,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.lock_rounded,
-                        color: const Color(0xFFFFC400),
-                        size: size * 0.17,
                       ),
                     ),
                   ),
