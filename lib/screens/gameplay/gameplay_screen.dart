@@ -74,7 +74,7 @@ class _GameplayScreenState extends State<GameplayScreen>
   int _genericPromptToken = 0;
 
   static const double _passingScore = 80;
-  static const Duration _levelOneRecordingDuration = Duration(seconds: 2);
+  static const Duration _levelOneRecordingDuration = Duration(seconds: 3);
   static const Duration _levelOneAutoRecordDelay = Duration(seconds: 1);
   static const Duration _levelOneAudioTimeout = Duration(seconds: 10);
   static const Duration _feedbackAudioTimeout = Duration(seconds: 12);
@@ -933,12 +933,16 @@ class _GameplayScreenState extends State<GameplayScreen>
                     left: 0,
                     right: 0,
                     bottom: safePadding.bottom + (compact ? 10 : 16),
-                    child: _LevelOneControls(
-                      isRecording: _isLevelOneRecording,
-                      isAssessing: _isLevelOneAssessing,
-                      isRecordPending: _isLevelOneRecordPending,
-                      countdown: _levelOneCountdown,
-                      recordProgress: _levelOneRecordProgress,
+                    child: Center(
+                      child: RecordingMicButton(
+                        isPending: _isLevelOneRecordPending,
+                        isRecording: _isLevelOneRecording,
+                        isProcessing: _isLevelOneAssessing,
+                        countdown: _levelOneCountdown,
+                        progress: _levelOneRecordProgress,
+                        idleLabel: 'Record',
+                        size: 58,
+                      ),
                     ),
                   ),
                 if (_levelOneErrorMessage != null && !_showLevelOneCompletion)
@@ -1141,79 +1145,6 @@ class _LevelOneWordCard extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _LevelOneControls extends StatelessWidget {
-  final bool isRecording;
-  final bool isAssessing;
-  final bool isRecordPending;
-  final int countdown;
-  final double recordProgress;
-
-  const _LevelOneControls({
-    required this.isRecording,
-    required this.isAssessing,
-    required this.isRecordPending,
-    required this.countdown,
-    required this.recordProgress,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        _LevelOneControlButton(
-          assetPath: AppAssets.microphoneButton,
-          label: isRecordPending
-              ? 'Recording soon'
-              : isAssessing
-                  ? 'Checking'
-                  : isRecording
-                  ? 'Recording $countdown'
-                  : 'Record',
-          isBusy: isRecordPending || isRecording || isAssessing,
-          progress: recordProgress,
-          showCountdownRing: isRecordPending || isRecording || isAssessing,
-          emphasize: true,
-        ),
-      ],
-    );
-  }
-}
-
-class _LevelOneControlButton extends StatelessWidget {
-  final String assetPath;
-  final String label;
-  final bool isBusy;
-  final double progress;
-  final bool showCountdownRing;
-  final bool emphasize;
-
-  const _LevelOneControlButton({
-    required this.assetPath,
-    required this.label,
-    required this.isBusy,
-    required this.progress,
-    required this.showCountdownRing,
-    this.emphasize = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedScale(
-      scale: isBusy && emphasize ? 1.08 : 1.0,
-      duration: const Duration(milliseconds: 220),
-      child: CountdownMicButton(
-        assetPath: assetPath,
-        label: label,
-        progress: progress,
-        showRing: showCountdownRing,
-        isIndeterminate: label == 'Checking',
-        size: emphasize ? 58 : 46,
       ),
     );
   }

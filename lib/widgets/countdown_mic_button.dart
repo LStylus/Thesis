@@ -88,3 +88,51 @@ class CountdownMicButton extends StatelessWidget {
     );
   }
 }
+
+class RecordingMicButton extends StatelessWidget {
+  final bool isPending;
+  final bool isRecording;
+  final bool isProcessing;
+  final double progress;
+  final int countdown;
+  final double size;
+  final VoidCallback? onTap;
+  final String idleLabel;
+
+  const RecordingMicButton({
+    super.key,
+    required this.isPending,
+    required this.isRecording,
+    required this.isProcessing,
+    required this.progress,
+    required this.countdown,
+    this.size = 72,
+    this.onTap,
+    this.idleLabel = 'Record word',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final showRing = isPending || isRecording || isProcessing;
+    final label = isPending
+        ? 'Recording soon'
+        : isProcessing
+            ? 'Checking'
+            : isRecording
+                ? 'Recording $countdown'
+                : idleLabel;
+
+    return AnimatedScale(
+      scale: showRing ? 1.08 : 1.0,
+      duration: const Duration(milliseconds: 220),
+      child: CountdownMicButton(
+        label: label,
+        progress: progress,
+        showRing: showRing,
+        isIndeterminate: isProcessing,
+        size: size,
+        onTap: onTap,
+      ),
+    );
+  }
+}

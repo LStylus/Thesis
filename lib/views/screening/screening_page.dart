@@ -353,13 +353,12 @@ class _ScreeningViewState extends State<_ScreeningView> {
               ),
             const SizedBox(width: 22),
             if (!hasRecording)
-              CountdownMicButton(
-                assetPath: AppAssets.microphoneButton,
-                label: controller.isRecording
-                    ? 'Recording ${controller.recordingCountdown}'
-                    : 'Record word',
+              RecordingMicButton(
+                isPending: false,
+                isRecording: controller.isRecording,
+                isProcessing: false,
                 progress: controller.recordingProgress,
-                showRing: controller.isRecording,
+                countdown: controller.recordingCountdown,
                 onTap: controller.canRecord
                     ? controller.startTimedRecording
                     : null,

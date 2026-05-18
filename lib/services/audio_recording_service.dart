@@ -16,7 +16,7 @@ class AudioRecordingService {
 
   static const int sampleRate = 16000;
   static const int channelCount = 1;
-  static const Duration defaultRecordDuration = Duration(seconds: 5);
+  static const Duration defaultRecordDuration = Duration(seconds: 3);
 
   static const RecordConfig _wav16kMonoConfig = RecordConfig(
     encoder: AudioEncoder.wav,

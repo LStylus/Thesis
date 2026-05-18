@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
@@ -33,8 +34,16 @@ class _UserSelectPageState extends State<UserSelectPage> {
   @override
   void initState() {
     super.initState();
+    _lockLandscape();
     _selectedProfileId = widget.activeProfile.profileId;
     _profiles = _mergeProfiles(widget.profiles, widget.activeProfile);
+  }
+
+  Future<void> _lockLandscape() {
+    return SystemChrome.setPreferredOrientations(const [
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
   }
 
   List<ProfileModel> _mergeProfiles(
@@ -81,6 +90,9 @@ class _UserSelectPageState extends State<UserSelectPage> {
     await navigator.push(
       MaterialPageRoute(builder: (_) => const ChildInfoPage()),
     );
+
+    if (!mounted) return;
+    await _lockLandscape();
   }
 
   Future<void> _selectProfile(ProfileModel profile) async {

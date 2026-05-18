@@ -30,13 +30,17 @@ class _HomePageState extends State<HomePage>
   Timer? _initialLoadingTimer;
   bool _isInitialLoading = true;
 
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setPreferredOrientations([
+  static Future<void> lockLandscape() {
+    return SystemChrome.setPreferredOrientations(const [
       DeviceOrientation.landscapeLeft,
       DeviceOrientation.landscapeRight,
     ]);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    lockLandscape();
     final homeController = context.read<HomeController>();
     homeController.ensureCurrentUserProfileAssets().catchError((error) {
       debugPrint('Profile asset backfill failed: $error');
@@ -210,6 +214,8 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
         ),
       ),
     );
+
+    await _HomePageState.lockLandscape();
 
     if (!mounted || selectedProfile == null) return;
 
