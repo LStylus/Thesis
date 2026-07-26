@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/testing_defaults.dart';
 import '../../models/profile_model.dart';
+import '../../widgets/credentials_auth_scaffold.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
@@ -31,10 +29,6 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
     final authController = context.read<AuthController>();
     // Production behavior:
     // _childNameController.text = authController.draft.childName;
@@ -47,7 +41,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
 
     if (_selectedDate != null) {
       _birthDateController.text = DateFormat(
-        'MMMM dd, yyyy',
+        'MMM d, yyyy',
       ).format(_selectedDate!);
     }
   }
@@ -94,7 +88,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
-        _birthDateController.text = DateFormat('MMMM dd, yyyy').format(picked);
+        _birthDateController.text = DateFormat('MMM d, yyyy').format(picked);
       });
     }
   }
@@ -131,6 +125,7 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
   Widget build(BuildContext context) {
     return Consumer<AuthController>(
       builder: (context, authController, _) {
+        final dense = MediaQuery.sizeOf(context).height < 420;
         final agePreview = _selectedDate != null
             ? ProfileModel.calculateAge(_selectedDate!)
             : null;
@@ -138,29 +133,25 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
         final showAgeWarningInline =
             agePreview != null && !_isSupportedAge(agePreview);
 
-        return OceanAuthScaffold(
-          topSpacing: AppSpacing.authTopSpacing,
-          leading: OceanBackButton(onPressed: () => Navigator.pop(context)),
-          children: [
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  const Text(
-                    'Almost there',
-                    textAlign: TextAlign.center,
-                    style: OceanAuthTextStyles.title,
-                  ),
-                  const SizedBox(height: AppSpacing.gapXs),
-                  const Text(
-                    'tell us about the child',
-                    textAlign: TextAlign.center,
-                    style: OceanAuthTextStyles.subtitle,
-                  ),
-                  const SizedBox(height: AppSpacing.gapXl),
-                  CustomTextField(
+        return VoyageFlowScaffold(
+          currentStep: 2,
+          totalSteps: 2,
+          onBack: () => Navigator.pop(context),
+          title: 'About the child',
+          subtitle:
+              'Add the details used to prepare an age-appropriate screening.',
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                CredentialFieldsLayout(
+                  firstField: CustomTextField(
                     controller: _childNameController,
-                    hintText: "Child's Name",
+                    labelText: "Child's name",
+                    hintText: 'Enter the child\'s name',
+                    prefixIcon: const Icon(Icons.child_care_rounded),
+                    textInputAction: TextInputAction.next,
                     onChanged: (_) => authController.clearError(),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
@@ -169,17 +160,20 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: AppSpacing.gapSm),
-                  TextFormField(
+                  secondField: TextFormField(
                     controller: _birthDateController,
                     readOnly: true,
                     onTap: _pickDate,
                     style: AppTextStyles.field,
                     decoration: OceanFormStyles.inputDecoration(
-                      "Child's Birthdate",
+                      'Select date',
+                      labelText: "Child's birthdate",
+                      prefixIcon: dense
+                          ? null
+                          : const Icon(Icons.calendar_month_outlined),
                       suffixIcon: const Icon(
                         Icons.keyboard_arrow_down_rounded,
-                        color: AppColors.borderGray,
+                        color: Color(0xFF6E8995),
                       ),
                     ),
                     validator: (value) {
@@ -196,42 +190,60 @@ class _ChildInfoPageState extends State<ChildInfoPage> {
                       return null;
                     },
                   ),
-                  if (showAgeWarningInline) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Warning: age $agePreview is outside the supported range. '
-                      'Only children aged 4 to 8 can proceed.',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.orange,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                ),
+                if (showAgeWarningInline) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 9,
                     ),
-                  ],
-                  const SizedBox(height: AppSpacing.gapMd),
-                  PrimaryButton(
-                    text: 'Complete',
-                    onPressed: authController.isLoading
-                        ? null
-                        : () => _complete(authController),
-                    isLoading: authController.isLoading,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7E8),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: const Color(0xFFFFD79B)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.info_outline_rounded,
+                          color: Color(0xFFB76B00),
+                          size: 19,
+                        ),
+                        const SizedBox(width: 9),
+                        Expanded(
+                          child: Text(
+                            'Age $agePreview is outside the supported 4-8 year range.',
+                            style: const TextStyle(
+                              color: Color(0xFF8B560A),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  if (authController.errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      authController.errorMessage!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: AppColors.error,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
                 ],
-              ),
+                if (authController.errorMessage != null) ...[
+                  const SizedBox(height: 10),
+                  CredentialsErrorBanner(message: authController.errorMessage!),
+                ],
+                SizedBox(height: dense ? 10 : 20),
+                PrimaryButton(
+                  text: 'Continue to screening',
+                  onPressed: authController.isLoading
+                      ? null
+                      : () => _complete(authController),
+                  isLoading: authController.isLoading,
+                  height: dense ? 48 : 56,
+                  borderRadius: 8,
+                  trailingIcon: Icons.arrow_forward_rounded,
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
     );

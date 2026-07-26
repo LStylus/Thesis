@@ -1,0 +1,17 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="whale" x1="52" y1="48" x2="184" y2="206" gradientUnits="userSpaceOnUse"><stop stop-color="#55D9FF"/><stop offset="0.58" stop-color="#00BBF9"/><stop offset="1" stop-color="#087EBA"/></linearGradient>
+  <linearGradient id="belly" x1="96" y1="118" x2="150" y2="205" gradientUnits="userSpaceOnUse"><stop stop-color="#FFF5F8"/><stop offset="1" stop-color="#F5B7C6"/></linearGradient>
+  <linearGradient id="coral" x1="40" y1="40" x2="204" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#FF9DB1"/><stop offset="1" stop-color="#E74669"/></linearGradient>
+  <linearGradient id="gold" x1="56" y1="42" x2="194" y2="216" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE98A"/><stop offset="0.55" stop-color="#FFC94F"/><stop offset="1" stop-color="#E99724"/></linearGradient>
+  <linearGradient id="teal" x1="48" y1="44" x2="204" y2="216" gradientUnits="userSpaceOnUse"><stop stop-color="#69E1D0"/><stop offset="1" stop-color="#139B9D"/></linearGradient>
+  <linearGradient id="blue" x1="44" y1="32" x2="206" y2="224" gradientUnits="userSpaceOnUse"><stop stop-color="#B9F5FF"/><stop offset="0.55" stop-color="#58D9F2"/><stop offset="1" stop-color="#2687CF"/></linearGradient>
+  <linearGradient id="purple" x1="56" y1="40" x2="196" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#C5A5FF"/><stop offset="1" stop-color="#7157C8"/></linearGradient>
+  <radialGradient id="glow"><stop stop-color="#FFF9B8"/><stop offset="0.45" stop-color="#FFD85E" stop-opacity=".8"/><stop offset="1" stop-color="#FFD85E" stop-opacity="0"/></radialGradient>
+  <radialGradient id="bubble"><stop stop-color="#FFFFFF" stop-opacity=".7"/><stop offset=".45" stop-color="#9CEEFF" stop-opacity=".34"/><stop offset="1" stop-color="#44CBEF" stop-opacity=".16"/></radialGradient>
+</defs>
+<path d="M29 128h198" stroke="#176C91" stroke-width="66" stroke-linecap="round"/>
+<path d="M29 128h198" stroke="#BFF6FF" stroke-opacity=".62" stroke-width="54" stroke-linecap="round"/>
+<path d="M42 111h168" stroke="white" stroke-opacity=".68" stroke-width="9" stroke-linecap="round"/>
+<g fill="url(#gold)" stroke="#B86F25" stroke-width="5"><rect x="24" y="89" width="27" height="78" rx="10"/><rect x="107" y="89" width="27" height="78" rx="10"/><rect x="205" y="89" width="27" height="78" rx="10"/></g>
+</svg>

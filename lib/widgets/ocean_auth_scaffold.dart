@@ -9,6 +9,10 @@ import '../core/constants/app_colors.dart';
 import '../core/constants/app_spacing.dart';
 import '../core/constants/app_text_styles.dart';
 
+double _clampDouble(double value, double min, double max) {
+  return value.clamp(min, max).toDouble();
+}
+
 class OceanAuthScaffold extends StatelessWidget {
   final List<Widget> children;
   final double topSpacing;
@@ -80,52 +84,71 @@ class OceanAuthScaffold extends StatelessWidget {
             SafeArea(
               child: LayoutBuilder(
                 builder: (context, safeConstraints) {
-                  final isCompactHeight = safeConstraints.maxHeight < 700;
-                  final isNarrow = safeConstraints.maxWidth < 360;
-                  final effectiveTopSpacing = math.max(
-                    34.0,
-                    topSpacing * (isCompactHeight ? 0.72 : 1.0),
-                  );
-                  final effectiveHorizontalPadding = isNarrow
-                      ? AppSpacing.compactPageHorizontalPadding
-                      : horizontalPadding;
-                  final contentWidth = math.min(
-                    math.max(
-                      0.0,
-                      safeConstraints.maxWidth -
-                          (effectiveHorizontalPadding * 2),
-                    ),
-                    AppSpacing.contentMaxWidth,
-                  );
                   final keyboardInset = mediaQuery.viewInsets.bottom;
-                  final effectiveBottomPadding =
-                      bottomPadding + bottomSafeInset + keyboardInset;
+                  final effectiveHorizontalPadding = _clampDouble(
+                    safeConstraints.maxWidth * 0.055,
+                    AppSpacing.compactPageHorizontalPadding,
+                    math.max(
+                      AppSpacing.compactPageHorizontalPadding,
+                      horizontalPadding * 2,
+                    ),
+                  );
+                  final verticalPadding = _clampDouble(
+                    safeConstraints.maxHeight * 0.052,
+                    16,
+                    36,
+                  );
+                  final paneGap = _clampDouble(
+                    safeConstraints.maxWidth * 0.035,
+                    20,
+                    48,
+                  );
+                  final paneHeight = math.max(
+                    360.0,
+                    safeConstraints.maxHeight -
+                        (verticalPadding * 2) -
+                        keyboardInset,
+                  );
+                  final contentTopPadding = _clampDouble(topSpacing, 10, 32);
+                  final contentBottomPadding = _clampDouble(
+                    bottomPadding,
+                    18,
+                    42,
+                  );
 
                   return SingleChildScrollView(
                     physics: const ClampingScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(
                       effectiveHorizontalPadding,
-                      0,
+                      verticalPadding,
                       effectiveHorizontalPadding,
-                      effectiveBottomPadding,
+                      verticalPadding + bottomSafeInset,
                     ),
-                    child: Align(
-                      alignment: Alignment.topCenter,
-                      child: SizedBox(
-                        width: contentWidth,
-                        child: Column(
-                          children: [
-                            SizedBox(height: effectiveTopSpacing),
-                            if (showMascot) ...[
-                              FigmaWhaleMascot(
-                                width: mascotWidth,
-                                height: mascotHeight,
-                              ),
-                              const SizedBox(height: AppSpacing.gapMd),
-                            ],
-                            ...children,
-                          ],
-                        ),
+                    child: SizedBox(
+                      height: paneHeight,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: _LandscapeAuthBrandPanel(
+                              showMascot: showMascot,
+                              mascotWidth: mascotWidth,
+                              mascotHeight: mascotHeight,
+                              showSandDecoration: showSandDecoration,
+                            ),
+                          ),
+                          SizedBox(width: paneGap),
+                          Expanded(
+                            flex: 4,
+                            child: _LandscapeAuthContentPane(
+                              height: paneHeight,
+                              topPadding: contentTopPadding,
+                              bottomPadding: contentBottomPadding,
+                              children: children,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -143,6 +166,199 @@ class OceanAuthScaffold extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _LandscapeAuthContentPane extends StatelessWidget {
+  final List<Widget> children;
+  final double height;
+  final double topPadding;
+  final double bottomPadding;
+
+  const _LandscapeAuthContentPane({
+    required this.children,
+    required this.height,
+    required this.topPadding,
+    required this.bottomPadding,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final minContentHeight = math.max(0.0, height - topPadding - bottomPadding);
+
+    return Align(
+      alignment: Alignment.center,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppSpacing.contentMaxWidth),
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(0, topPadding, 0, bottomPadding),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minContentHeight),
+            child: Align(
+              alignment: Alignment.center,
+              child: Column(mainAxisSize: MainAxisSize.min, children: children),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LandscapeAuthBrandPanel extends StatelessWidget {
+  final bool showMascot;
+  final double mascotWidth;
+  final double mascotHeight;
+  final bool showSandDecoration;
+
+  const _LandscapeAuthBrandPanel({
+    required this.showMascot,
+    required this.mascotWidth,
+    required this.mascotHeight,
+    required this.showSandDecoration,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+      child: ColoredBox(
+        color: showSandDecoration ? AppColors.infoBackground : Colors.white,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: CustomPaint(
+                painter: _LandscapeBrandPainter(
+                  showSandDecoration: showSandDecoration,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 24, 28, 24),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final whaleScale = _clampDouble(
+                    constraints.maxHeight / 460,
+                    0.68,
+                    1,
+                  );
+                  final titleSize = _clampDouble(
+                    constraints.maxWidth * 0.12,
+                    34,
+                    54,
+                  );
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'VOICE VOYAGE',
+                          style: AppTextStyles.appTitle.copyWith(
+                            fontSize: titleSize,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Speech sound adventure',
+                        style: AppTextStyles.subtitle.copyWith(
+                          color: AppColors.textGray,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (showMascot)
+                        Center(
+                          child: FigmaWhaleMascot(
+                            width: mascotWidth * whaleScale,
+                            height: mascotHeight * whaleScale,
+                          ),
+                        ),
+                      const Spacer(),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LandscapeBrandPainter extends CustomPainter {
+  final bool showSandDecoration;
+
+  const _LandscapeBrandPainter({required this.showSandDecoration});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..isAntiAlias = true;
+
+    paint.color = AppColors.primary.withValues(alpha: 0.1);
+    final wave = Path()
+      ..moveTo(0, size.height * 0.22)
+      ..cubicTo(
+        size.width * 0.2,
+        size.height * 0.08,
+        size.width * 0.48,
+        size.height * 0.36,
+        size.width,
+        size.height * 0.16,
+      )
+      ..lineTo(size.width, 0)
+      ..lineTo(0, 0)
+      ..close();
+    canvas.drawPath(wave, paint);
+
+    if (!showSandDecoration) return;
+
+    paint.color = AppColors.sand.withValues(alpha: 0.96);
+    final sand = Path()
+      ..moveTo(0, size.height * 0.72)
+      ..cubicTo(
+        size.width * 0.18,
+        size.height * 0.66,
+        size.width * 0.44,
+        size.height * 0.82,
+        size.width,
+        size.height * 0.72,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(sand, paint);
+
+    paint.color = AppColors.coral.withValues(alpha: 0.72);
+    final star = Path();
+    final center = Offset(size.width * 0.85, size.height * 0.86);
+    const outer = 22.0;
+    const inner = 9.5;
+    for (var i = 0; i < 10; i++) {
+      final angle = -math.pi / 2 + i * math.pi / 5;
+      final radius = i.isEven ? outer : inner;
+      final point = Offset(
+        center.dx + math.cos(angle) * radius,
+        center.dy + math.sin(angle) * radius,
+      );
+      if (i == 0) {
+        star.moveTo(point.dx, point.dy);
+      } else {
+        star.lineTo(point.dx, point.dy);
+      }
+    }
+    star.close();
+    canvas.drawPath(star, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LandscapeBrandPainter oldDelegate) {
+    return oldDelegate.showSandDecoration != showSandDecoration;
   }
 }
 
@@ -231,21 +447,33 @@ class OceanAuthTextStyles {
 class OceanFormStyles {
   static InputDecoration inputDecoration(
     String hintText, {
+    String? labelText,
+    Widget? prefixIcon,
     Widget? suffixIcon,
   }) {
     return InputDecoration(
       hintText: hintText,
+      labelText: labelText,
+      prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: Colors.white,
+      fillColor: const Color(0xFFF8FBFC),
       constraints: const BoxConstraints(minHeight: AppSpacing.fieldHeight),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 21),
       hintStyle: AppTextStyles.fieldHint,
-      border: _border(AppColors.borderGray),
-      enabledBorder: _border(AppColors.borderGray),
-      focusedBorder: _border(AppColors.primary, width: 1.4),
+      labelStyle: AppTextStyles.fieldHint.copyWith(fontSize: 14),
+      floatingLabelStyle: AppTextStyles.fieldHint.copyWith(
+        color: AppColors.primaryShadow,
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+      ),
+      prefixIconColor: const Color(0xFF6E8995),
+      suffixIconColor: const Color(0xFF6E8995),
+      border: _border(const Color(0xFFDCE8EC)),
+      enabledBorder: _border(const Color(0xFFDCE8EC)),
+      focusedBorder: _border(AppColors.primary, width: 1.8),
       errorBorder: _border(AppColors.error),
-      focusedErrorBorder: _border(AppColors.error, width: 1.4),
+      focusedErrorBorder: _border(AppColors.error, width: 1.8),
     );
   }
 
@@ -263,9 +491,7 @@ class BottomSandDecoration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const SizedBox.expand(
-      child: IgnorePointer(
-        child: CustomPaint(painter: _SandPainter()),
-      ),
+      child: IgnorePointer(child: CustomPaint(painter: _SandPainter())),
     );
   }
 }

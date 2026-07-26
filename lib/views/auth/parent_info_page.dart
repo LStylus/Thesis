@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/testing_defaults.dart';
+import '../../widgets/credentials_auth_scaffold.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
@@ -39,10 +37,6 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
     final authController = context.read<AuthController>();
     // Production behavior:
     // _nameController.text = authController.draft.parentName;
@@ -94,6 +88,7 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
   @override
   Widget build(BuildContext context) {
     final authController = context.read<AuthController>();
+    final dense = MediaQuery.sizeOf(context).height < 420;
 
     return PopScope(
       canPop: _allowPop,
@@ -102,29 +97,25 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
           _returnToSignup();
         }
       },
-      child: OceanAuthScaffold(
-        topSpacing: AppSpacing.authTopSpacing,
-        leading: OceanBackButton(onPressed: _returnToSignup),
-        children: [
-          Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                const Text(
-                  'Please tell us about\nyourself',
-                  textAlign: TextAlign.center,
-                  style: OceanAuthTextStyles.title,
-                ),
-                const SizedBox(height: AppSpacing.gapXs),
-                const Text(
-                  'person completing the screening form',
-                  textAlign: TextAlign.center,
-                  style: OceanAuthTextStyles.subtitle,
-                ),
-                const SizedBox(height: AppSpacing.gapXl),
-                CustomTextField(
+      child: VoyageFlowScaffold(
+        currentStep: 1,
+        totalSteps: 2,
+        onBack: _returnToSignup,
+        title: 'About you',
+        subtitle: 'Tell us about the person completing the screening.',
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              CredentialFieldsLayout(
+                firstField: CustomTextField(
                   controller: _nameController,
-                  hintText: 'Name',
+                  labelText: 'Your name',
+                  hintText: 'Enter your full name',
+                  prefixIcon: const Icon(Icons.person_outline_rounded),
+                  textInputAction: TextInputAction.next,
+                  autofillHints: const [AutofillHints.name],
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return 'Please enter your name';
@@ -132,24 +123,22 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: AppSpacing.gapSm),
-                DropdownButtonFormField<String>(
+                secondField: DropdownButtonFormField<String>(
                   initialValue: _selectedRelationship,
                   decoration: OceanFormStyles.inputDecoration(
-                    'Relationship to the Child',
+                    'Select relationship',
+                    labelText: 'Relationship to child',
+                    prefixIcon: const Icon(Icons.family_restroom_rounded),
                   ),
                   icon: const Icon(
                     Icons.keyboard_arrow_down_rounded,
-                    color: AppColors.borderGray,
+                    color: Color(0xFF6E8995),
                   ),
                   items: _relationships
                       .map(
                         (value) => DropdownMenuItem(
                           value: value,
-                          child: Text(
-                            value,
-                            style: AppTextStyles.field,
-                          ),
+                          child: Text(value, style: AppTextStyles.field),
                         ),
                       )
                       .toList(),
@@ -165,15 +154,18 @@ class _ParentInfoPageState extends State<ParentInfoPage> {
                     return null;
                   },
                 ),
-                const SizedBox(height: AppSpacing.gapMd),
-                PrimaryButton(
-                  text: 'Next',
-                  onPressed: () => _goNext(authController),
-                ),
-              ],
-            ),
+              ),
+              SizedBox(height: dense ? 10 : 20),
+              PrimaryButton(
+                text: 'Continue',
+                onPressed: () => _goNext(authController),
+                height: dense ? 48 : 56,
+                borderRadius: 8,
+                trailingIcon: Icons.arrow_forward_rounded,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

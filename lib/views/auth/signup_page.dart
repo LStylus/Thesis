@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_spacing.dart';
+import '../../core/constants/app_text_styles.dart';
 import '../../core/constants/testing_defaults.dart';
+import '../../widgets/credentials_auth_scaffold.dart';
 import '../../widgets/custom_text_field.dart';
-import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
 import 'existing_parent_confirmation_page.dart';
 import 'parent_info_page.dart';
@@ -31,10 +29,6 @@ class _SignupPageState extends State<SignupPage> {
   @override
   void initState() {
     super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
 
     // Production behavior:
     // _emailController.text = '';
@@ -108,118 +102,109 @@ class _SignupPageState extends State<SignupPage> {
               _goToLogin(authController);
             }
           },
-          child: OceanAuthScaffold(
-            topSpacing: AppSpacing.authTopSpacing,
-            children: [
-              Form(
+          child: CredentialsAuthScaffold(
+            mode: CredentialsAuthMode.signup,
+            title: 'Create Your Account',
+            subtitle: "Start your family's Voice Voyage.",
+            onLoginSelected: () => _goToLogin(authController),
+            child: AutofillGroup(
+              child: Form(
                 key: _formKey,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text(
-                      'Create Your Account',
-                      textAlign: TextAlign.center,
-                      style: OceanAuthTextStyles.title,
-                    ),
-                    const SizedBox(height: AppSpacing.gapXs),
-                    const Text(
-                      'to begin a journey in Voice Voyage',
-                      textAlign: TextAlign.center,
-                      style: OceanAuthTextStyles.subtitle,
-                    ),
-                    const SizedBox(height: AppSpacing.gapXl),
-                    CustomTextField(
-                      controller: _emailController,
-                      hintText: 'Email',
-                      onChanged: (_) => authController.clearError(),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter your email';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Please enter a valid email';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: AppSpacing.gapSm),
-                    CustomTextField(
-                      controller: _passwordController,
-                      hintText: 'Password',
-                      obscureText: _obscurePassword,
-                      onChanged: (_) => authController.clearError(),
-                      suffixIcon: IconButton(
-                        tooltip: _obscurePassword
-                            ? 'Show password'
-                            : 'Hide password',
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
+                    CredentialFieldsLayout(
+                      firstField: CustomTextField(
+                        controller: _emailController,
+                        labelText: 'Email address',
+                        hintText: 'name@example.com',
+                        prefixIcon: const Icon(Icons.mail_outline_rounded),
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        autofillHints: const [AutofillHints.newUsername],
+                        autocorrect: false,
+                        onChanged: (_) => authController.clearError(),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter your email';
+                          }
+                          if (!value.contains('@')) {
+                            return 'Please enter a valid email';
+                          }
+                          return null;
                         },
-                        color: AppColors.borderGray,
-                        icon: Icon(
-                          _obscurePassword
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
+                      ),
+                      secondField: CustomTextField(
+                        controller: _passwordController,
+                        labelText: 'Password',
+                        hintText: 'Create a secure password',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        obscureText: _obscurePassword,
+                        textInputAction: TextInputAction.done,
+                        autofillHints: const [AutofillHints.newPassword],
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        onChanged: (_) => authController.clearError(),
+                        onFieldSubmitted: (_) {
+                          if (!authController.isLoading) {
+                            _goNext(authController);
+                          }
+                        },
+                        suffixIcon: IconButton(
+                          tooltip: _obscurePassword
+                              ? 'Show password'
+                              : 'Hide password',
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                          icon: Icon(
+                            _obscurePassword
+                                ? Icons.visibility_off_rounded
+                                : Icons.visibility_rounded,
+                          ),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your password';
+                          }
+                          if (value.length < 6) {
+                            return 'Password must be at least 6 characters';
+                          }
+                          return null;
+                        },
+                      ),
+                      footer: Text(
+                        'Use at least 6 characters.',
+                        style: AppTextStyles.helper.copyWith(
+                          color: const Color(0xFF6E8995),
                         ),
                       ),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter your password';
-                        }
-                        if (value.length < 6) {
-                          return 'Password must be at least 6 characters';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: AppSpacing.gapMd),
+                    if (authController.errorMessage != null) ...[
+                      const SizedBox(height: 14),
+                      CredentialsErrorBanner(
+                        message: authController.errorMessage!,
+                      ),
+                    ],
+                    SizedBox(
+                      height: MediaQuery.sizeOf(context).height < 420 ? 10 : 18,
+                    ),
                     PrimaryButton(
                       text: 'Sign up',
                       onPressed: authController.isLoading
                           ? null
                           : () => _goNext(authController),
                       isLoading: authController.isLoading,
-                    ),
-                    if (authController.errorMessage != null) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        authController.errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: AppColors.error,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: AppSpacing.gapLg),
-                    RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        style: const TextStyle(
-                          color: AppColors.textGray,
-                          fontSize: 14,
-                          letterSpacing: 0,
-                        ),
-                        children: [
-                          const TextSpan(text: 'Already have an account? '),
-                          WidgetSpan(
-                            alignment: PlaceholderAlignment.middle,
-                            child: GestureDetector(
-                              onTap: () => _goToLogin(authController),
-                              child: const Text(
-                                'Login here',
-                                style: OceanAuthTextStyles.link,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                      height: MediaQuery.sizeOf(context).height < 420 ? 48 : 56,
+                      borderRadius: 8,
+                      trailingIcon: Icons.arrow_forward_rounded,
                     ),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
         );
       },

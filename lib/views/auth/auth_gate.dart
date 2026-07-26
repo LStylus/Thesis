@@ -64,9 +64,7 @@ class _AuthLoadingView extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: CircularProgressIndicator(color: AppColors.primary),
-      ),
+      body: Center(child: CircularProgressIndicator(color: AppColors.primary)),
     );
   }
 }

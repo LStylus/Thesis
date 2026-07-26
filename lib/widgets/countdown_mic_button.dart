@@ -117,10 +117,10 @@ class RecordingMicButton extends StatelessWidget {
     final label = isPending
         ? 'Recording soon'
         : isProcessing
-            ? 'Checking'
-            : isRecording
-                ? 'Recording $countdown'
-                : idleLabel;
+        ? 'Checking'
+        : isRecording
+        ? 'Recording $countdown'
+        : idleLabel;
 
     return AnimatedScale(
       scale: showRing ? 1.08 : 1.0,

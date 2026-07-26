@@ -260,21 +260,20 @@ class ScreeningController extends ChangeNotifier {
   void _startRecordingProgressTimer() {
     _stopRecordingProgressTimer();
     final startedAt = DateTime.now();
-    _recordingProgressTimer = Timer.periodic(
-      const Duration(milliseconds: 50),
-      (_) {
-        final elapsed = DateTime.now().difference(startedAt);
-        final progress =
-            elapsed.inMilliseconds / _autoRecordDuration.inMilliseconds;
-        final remaining = _autoRecordDuration - elapsed;
+    _recordingProgressTimer = Timer.periodic(const Duration(milliseconds: 50), (
+      _,
+    ) {
+      final elapsed = DateTime.now().difference(startedAt);
+      final progress =
+          elapsed.inMilliseconds / _autoRecordDuration.inMilliseconds;
+      final remaining = _autoRecordDuration - elapsed;
 
-        recordingProgress = progress.clamp(0, 1).toDouble();
-        recordingCountdown = remaining.inMilliseconds <= 0
-            ? 0
-            : (remaining.inMilliseconds / 1000).ceil();
-        notifyListeners();
-      },
-    );
+      recordingProgress = progress.clamp(0, 1).toDouble();
+      recordingCountdown = remaining.inMilliseconds <= 0
+          ? 0
+          : (remaining.inMilliseconds / 1000).ceil();
+      notifyListeners();
+    });
   }
 
   void _stopRecordingProgressTimer() {

@@ -9,6 +9,9 @@ class PrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool isLoading;
   final double? width;
+  final double height;
+  final double borderRadius;
+  final IconData? trailingIcon;
 
   const PrimaryButton({
     super.key,
@@ -16,6 +19,9 @@ class PrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.isLoading = false,
     this.width = double.infinity,
+    this.height = AppSpacing.buttonHeight,
+    this.borderRadius = AppSpacing.buttonRadius,
+    this.trailingIcon,
   });
 
   @override
@@ -24,19 +30,19 @@ class PrimaryButton extends StatelessWidget {
 
     return Container(
       width: width,
-      height: AppSpacing.buttonHeight + 4,
+      height: height + 3,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+        borderRadius: BorderRadius.circular(borderRadius),
         boxShadow: [
           BoxShadow(
             color: enabled ? AppColors.primaryShadow : const Color(0xFFB7B7B7),
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 3),
             blurRadius: 0,
           ),
         ],
       ),
       child: SizedBox(
-        height: AppSpacing.buttonHeight,
+        height: height,
         child: ElevatedButton(
           onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
@@ -49,7 +55,7 @@ class PrimaryButton extends StatelessWidget {
             elevation: 0,
             shadowColor: Colors.transparent,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppSpacing.buttonRadius),
+              borderRadius: BorderRadius.circular(borderRadius),
             ),
             textStyle: AppTextStyles.button,
           ),
@@ -62,7 +68,24 @@ class PrimaryButton extends StatelessWidget {
                     color: Colors.white,
                   ),
                 )
-              : Text(text, textAlign: TextAlign.center),
+              : trailingIcon == null
+              ? FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(text, textAlign: TextAlign.center),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(text, textAlign: TextAlign.center),
+                      ),
+                    ),
+                    const SizedBox(width: 9),
+                    Icon(trailingIcon, size: 21),
+                  ],
+                ),
         ),
       ),
     );
