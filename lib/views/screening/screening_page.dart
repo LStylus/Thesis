@@ -7,6 +7,7 @@ import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
 import '../../models/screening_word_model.dart';
+import '../../services/model_2_assessment_service.dart';
 import '../../widgets/countdown_mic_button.dart';
 import '../../widgets/credentials_auth_scaffold.dart';
 import '../../widgets/glow_asset_button.dart';
@@ -257,7 +258,10 @@ class _ScreeningViewState extends State<_ScreeningView> {
           builder: (_) => ScreeningAccuracyResultsPage(
             words: controller.words,
             recordingsByWordId: controller.recordingsByWordId,
-            assessmentResultsByWordId: controller.assessmentResultsByWordId,
+            assessmentResultsByWordId: controller.assessmentResultsByWordId.map(
+              (key, value) =>
+                  MapEntry(key, Model2AssessmentResult.fromPhoneme(value)),
+            ),
           ),
         ),
       );

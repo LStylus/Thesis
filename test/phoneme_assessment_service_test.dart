@@ -11,10 +11,9 @@ ScreeningWordModel _word({
 }) {
   return ScreeningWordModel(
     id: id,
+    audioId: displayWord,
     displayWord: displayWord,
-    ageGroup: 4,
-    phonemeProcess: 'stopping',
-    wordPosition: 'initial',
+    age: 4,
   );
 }
 
