@@ -8,21 +8,16 @@ import 'package:http_parser/http_parser.dart';
 
 import '../models/screening_word_model.dart';
 
-class Model2AssessmentService {
-  Model2AssessmentService({String? baseUrl})
-    : baseUrl = baseUrl ?? defaultBaseUrl;
+class PhonemeAssessmentService {
+  PhonemeAssessmentService({String? baseUrl})
+    : baseUrl = baseUrl ?? _defaultBaseUrl;
 
   final String baseUrl;
 
-  static const String _definedBaseUrl = String.fromEnvironment(
-    'MODEL_2_BASE_URL',
-  );
-
-  static String get defaultBaseUrl {
-    if (_definedBaseUrl.isNotEmpty) return _definedBaseUrl;
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      return 'https://wystan28-PhonemeRecognizer.hf.space';
-    }
+  /// On Android emulator, 10.0.2.2 maps to the host machine's localhost.
+  /// On other platforms (Windows, iOS simulator), localhost works directly.
+  static String get _defaultBaseUrl {
+    if (Platform.isAndroid) return 'http://10.0.2.2:8001';
     return 'http://127.0.0.1:8001';
   }
 
@@ -30,23 +25,24 @@ class Model2AssessmentService {
     return Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/assess');
   }
 
-  Future<Model2AssessmentResult> assess({
+  Future<PhonemeAssessmentResult> assess({
     required ScreeningWordModel word,
     required String recordingPath,
+    required int age,
   }) async {
     final requestStartedAt = DateTime.now();
     debugPrint(
-      '[model-api] assess_start word=${word.displayWord} '
-      'word_id=${word.id} base_url=$baseUrl uri=$_assessUri '
+      '[phoneme-api] assess_start word=${word.displayWord} '
+      'word_id=${word.id} age_years=$age base_url=$baseUrl uri=$_assessUri '
       'recording_path=$recordingPath',
     );
 
     final file = File(recordingPath);
     if (!await file.exists()) {
       debugPrint(
-        '[model-api] assess_abort word_id=${word.id} reason=file_not_found',
+        '[phoneme-api] assess_abort word_id=${word.id} reason=file_not_found',
       );
-      return Model2AssessmentResult.failure(
+      return PhonemeAssessmentResult.failure(
         word: word,
         recordingPath: recordingPath,
         error: 'Recording file was not found.',
@@ -56,12 +52,13 @@ class Model2AssessmentService {
     try {
       final fileSize = await file.length();
       debugPrint(
-        '[model-api] upload_prepare word_id=${word.id} '
+        '[phoneme-api] upload_prepare word_id=${word.id} '
         'filename=${_filenameFromPath(recordingPath)} bytes=$fileSize',
       );
 
       final request = http.MultipartRequest('POST', _assessUri)
         ..fields['word'] = word.displayWord.toLowerCase()
+        ..fields['age'] = age.toString()
         ..files.add(
           await http.MultipartFile.fromPath(
             'file',
@@ -72,8 +69,9 @@ class Model2AssessmentService {
         );
 
       debugPrint(
-        '[model-api] upload_send word_id=${word.id} '
-        'field_word=${request.fields['word']} file_field=file',
+        '[phoneme-api] upload_send word_id=${word.id} '
+        'field_word=${request.fields['word']} field_age=${request.fields['age']} '
+        'file_field=file',
       );
 
       final streamedResponse = await request.send().timeout(
@@ -85,41 +83,65 @@ class Model2AssessmentService {
           .inMilliseconds;
 
       debugPrint(
-        '[model-api] response_received word_id=${word.id} '
+        '[phoneme-api] response_received word_id=${word.id} '
         'status=${response.statusCode} elapsed_ms=$elapsedMs',
       );
       _logResponseBody(word.id, response.body);
 
+      // Parse body first — model errors are in the body, not the HTTP status
+      Map<String, dynamic>? decoded;
+      try {
+        if (response.body.isNotEmpty) {
+          decoded = jsonDecode(response.body) as Map<String, dynamic>;
+        }
+      } catch (_) {
+        // Invalid JSON — fall through to HTTP status check below
+      }
+
+      // Check for model-level or FastAPI validation error in the body
+      // regardless of HTTP status (model returns 400 with {"error": ...})
+      if (decoded != null) {
+        final bodyError = _extractBodyError(decoded);
+        if (bodyError != null) {
+          debugPrint(
+            '[phoneme-api] response_error word_id=${word.id} '
+            'message=$bodyError',
+          );
+          return PhonemeAssessmentResult.failure(
+            word: word,
+            recordingPath: recordingPath,
+            error: bodyError,
+            rawResponse: decoded,
+          );
+        }
+      }
+
+      // Fall back to HTTP status if no body error was found
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        return Model2AssessmentResult.failure(
+        return PhonemeAssessmentResult.failure(
           word: word,
           recordingPath: recordingPath,
-          error: 'Model-2 returned HTTP ${response.statusCode}.',
+          error: 'Phoneme model returned HTTP ${response.statusCode}.',
           rawBody: response.body,
         );
       }
 
-      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-      if (decoded['error'] != null) {
-        debugPrint(
-          '[model-api] response_error word_id=${word.id} '
-          'message=${_errorMessageFromResponse(decoded)}',
-        );
-        return Model2AssessmentResult.failure(
+      // Must have a decoded body at this point for a successful response
+      if (decoded == null) {
+        return PhonemeAssessmentResult.failure(
           word: word,
           recordingPath: recordingPath,
-          error: _errorMessageFromResponse(decoded),
-          rawResponse: decoded,
+          error: 'Phoneme model returned an empty response.',
         );
       }
 
-      final success = Model2AssessmentResult.success(
+      final success = PhonemeAssessmentResult.success(
         word: word,
         recordingPath: recordingPath,
         rawResponse: decoded,
       );
       debugPrint(
-        '[model-api] response_success word_id=${word.id} '
+        '[phoneme-api] response_success word_id=${word.id} '
         'score=${success.overallScore} expected=${success.expectedIpa} '
         'detected=${success.detectedIpa} '
         'process_count=${success.detectedProcesses.length} '
@@ -127,36 +149,61 @@ class Model2AssessmentService {
       );
       return success;
     } on TimeoutException {
-      debugPrint('[model-api] timeout word_id=${word.id} uri=$_assessUri');
-      return Model2AssessmentResult.failure(
+      debugPrint('[phoneme-api] timeout word_id=${word.id} uri=$_assessUri');
+      return PhonemeAssessmentResult.failure(
         word: word,
         recordingPath: recordingPath,
-        error: 'Model-2 request timed out.',
+        error: 'Phoneme model request timed out.',
       );
     } on SocketException {
-      debugPrint('[model-api] socket_error word_id=${word.id} uri=$_assessUri');
-      return Model2AssessmentResult.failure(
+      debugPrint('[phoneme-api] socket_error word_id=${word.id} uri=$_assessUri');
+      return PhonemeAssessmentResult.failure(
         word: word,
         recordingPath: recordingPath,
-        error: 'Could not connect to Model-2 at $baseUrl.',
+        error: 'Could not connect to the phoneme model at $baseUrl.',
       );
     } on FormatException {
-      debugPrint('[model-api] format_error word_id=${word.id}');
-      return Model2AssessmentResult.failure(
+      debugPrint('[phoneme-api] format_error word_id=${word.id}');
+      return PhonemeAssessmentResult.failure(
         word: word,
         recordingPath: recordingPath,
-        error: 'Model-2 returned an invalid response.',
+        error: 'Phoneme model returned an invalid response.',
       );
     } catch (error) {
       debugPrint(
-        '[model-api] unexpected_error word_id=${word.id} error=$error',
+        '[phoneme-api] unexpected_error word_id=${word.id} error=$error',
       );
-      return Model2AssessmentResult.failure(
+      return PhonemeAssessmentResult.failure(
         word: word,
         recordingPath: recordingPath,
-        error: 'Model-2 assessment failed: $error',
+        error: 'Phoneme model assessment failed: $error',
       );
     }
+  }
+
+  /// Extract a descriptive error from the response body.
+  /// Handles both model format ({"error": ..., "details": ...}) and
+  /// FastAPI validation format ({"detail": [...]}).
+  String? _extractBodyError(Map<String, dynamic> decoded) {
+    // Model error format: {"error": "...", "details": ...}
+    if (decoded['error'] != null) {
+      return _errorMessageFromResponse(decoded);
+    }
+    // FastAPI validation error format: {"detail": [...]}
+    if (decoded['detail'] != null) {
+      final detail = decoded['detail'];
+      if (detail is List && detail.isNotEmpty) {
+        return detail.map((d) {
+          final msg = d['msg']?.toString() ?? '';
+          final loc = d['loc'] is List
+              ? (d['loc'] as List).skip(1).join('.')
+              : '';
+          return '$msg${loc.isNotEmpty ? ' ($loc)' : ''}';
+        }).join('; ');
+      }
+      return detail.toString();
+    }
+    return null;
   }
 
   String _filenameFromPath(String path) {
@@ -166,7 +213,7 @@ class Model2AssessmentService {
   void _logResponseBody(String wordId, String body) {
     const chunkSize = 900;
     if (body.isEmpty) {
-      debugPrint('[model-api] response_body word_id=$wordId <empty>');
+      debugPrint('[phoneme-api] response_body word_id=$wordId <empty>');
       return;
     }
 
@@ -175,14 +222,14 @@ class Model2AssessmentService {
           ? offset + chunkSize
           : body.length;
       debugPrint(
-        '[model-api] response_body word_id=$wordId '
+        '[phoneme-api] response_body word_id=$wordId '
         'chunk=${offset ~/ chunkSize + 1} ${body.substring(offset, end)}',
       );
     }
   }
 
   String _errorMessageFromResponse(Map<String, dynamic> decoded) {
-    final error = decoded['error']?.toString() ?? 'Model-2 returned an error.';
+    final error = decoded['error']?.toString() ?? 'Phoneme model returned an error.';
     final details = decoded['details'];
 
     if (details is List && details.isNotEmpty) {
@@ -197,7 +244,7 @@ class Model2AssessmentService {
   }
 }
 
-class Model2AssessmentResult {
+class PhonemeAssessmentResult {
   final String wordId;
   final String displayWord;
   final String recordingPath;
@@ -205,12 +252,16 @@ class Model2AssessmentResult {
   final String? expectedIpa;
   final String? detectedIpa;
   final Map<String, dynamic>? assessment;
-  final Map<String, dynamic>? stats;
   final Map<String, dynamic>? rawResponse;
   final String? rawBody;
   final String? error;
+  final double? pcc;
+  final double? pccR;
+  final double? pvc;
+  final String? pccSeverity;
+  final bool? passed;
 
-  const Model2AssessmentResult({
+  const PhonemeAssessmentResult({
     required this.wordId,
     required this.displayWord,
     required this.recordingPath,
@@ -218,18 +269,22 @@ class Model2AssessmentResult {
     required this.expectedIpa,
     required this.detectedIpa,
     required this.assessment,
-    required this.stats,
     required this.rawResponse,
     required this.rawBody,
     required this.error,
+    this.pcc,
+    this.pccR,
+    this.pvc,
+    this.pccSeverity,
+    this.passed,
   });
 
-  factory Model2AssessmentResult.success({
+  factory PhonemeAssessmentResult.success({
     required ScreeningWordModel word,
     required String recordingPath,
     required Map<String, dynamic> rawResponse,
   }) {
-    return Model2AssessmentResult(
+    return PhonemeAssessmentResult(
       wordId: word.id,
       displayWord: word.displayWord,
       recordingPath: recordingPath,
@@ -237,21 +292,25 @@ class Model2AssessmentResult {
       expectedIpa: rawResponse['expected_ipa']?.toString(),
       detectedIpa: rawResponse['detected_ipa']?.toString(),
       assessment: _asMap(rawResponse['assessment']),
-      stats: _asMap(rawResponse['stats']),
       rawResponse: rawResponse,
       rawBody: null,
       error: null,
+      pcc: _asDouble(rawResponse['pcc']),
+      pccR: _asDouble(rawResponse['pcc_r']),
+      pvc: _asDouble(rawResponse['pvc']),
+      pccSeverity: rawResponse['pcc_severity']?.toString(),
+      passed: _asBool(rawResponse['passed']),
     );
   }
 
-  factory Model2AssessmentResult.failure({
+  factory PhonemeAssessmentResult.failure({
     required ScreeningWordModel word,
     required String recordingPath,
     required String error,
     Map<String, dynamic>? rawResponse,
     String? rawBody,
   }) {
-    return Model2AssessmentResult(
+    return PhonemeAssessmentResult(
       wordId: word.id,
       displayWord: word.displayWord,
       recordingPath: recordingPath,
@@ -259,7 +318,6 @@ class Model2AssessmentResult {
       expectedIpa: rawResponse?['expected_ipa']?.toString(),
       detectedIpa: rawResponse?['detected_ipa']?.toString(),
       assessment: _asMap(rawResponse?['assessment']),
-      stats: _asMap(rawResponse?['stats']),
       rawResponse: rawResponse,
       rawBody: rawBody,
       error: error,
@@ -306,7 +364,11 @@ class Model2AssessmentResult {
       'detected_processes': detectedProcesses,
       'detected_process_summary': detectedProcessSummary,
       'assessment': assessment,
-      'stats': stats,
+      'pcc': pcc,
+      'pcc_r': pccR,
+      'pvc': pvc,
+      'pcc_severity': pccSeverity,
+      'passed': passed,
       'error': error,
       if (rawBody != null) 'raw_body': rawBody,
     };
@@ -320,6 +382,11 @@ class Model2AssessmentResult {
   static Map<String, dynamic>? _asMap(Object? value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
+    return null;
+  }
+
+  static bool? _asBool(Object? value) {
+    if (value is bool) return value;
     return null;
   }
 }

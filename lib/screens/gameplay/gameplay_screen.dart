@@ -9,7 +9,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_assets.dart';
 import '../../models/screening_word_model.dart';
 import '../../services/audio_recording_service.dart';
-import '../../services/model_2_assessment_service.dart';
+import '../../services/phoneme_assessment_service.dart';
 import '../../widgets/countdown_mic_button.dart';
 
 enum GameplayState {
@@ -43,7 +43,7 @@ class GameplayScreen extends StatefulWidget {
 class _GameplayScreenState extends State<GameplayScreen>
     with SingleTickerProviderStateMixin {
   final AudioRecordingService _recordingService = AudioRecordingService();
-  final Model2AssessmentService _assessmentService = Model2AssessmentService();
+  final PhonemeAssessmentService _assessmentService = PhonemeAssessmentService();
   final AudioPlayer _promptPlayer = AudioPlayer();
 
   late final AnimationController _completionAnimationController;
@@ -53,7 +53,7 @@ class _GameplayScreenState extends State<GameplayScreen>
   GameplayState _state = GameplayState.intro;
   int _wordIndex = 0;
   int? _lastAccuracy;
-  Model2AssessmentResult? _lastAssessment;
+  PhonemeAssessmentResult? _lastAssessment;
   String? _errorMessage;
   Timer? _promptTimer;
   Timer? _levelOneCountdownTimer;
@@ -73,7 +73,6 @@ class _GameplayScreenState extends State<GameplayScreen>
   int _levelOneAudioToken = 0;
   int _genericPromptToken = 0;
 
-  static const double _passingScore = 80;
   static const Duration _levelOneRecordingDuration = Duration(seconds: 3);
   static const Duration _levelOneAutoRecordDelay = Duration(seconds: 1);
   static const Duration _levelOneAudioTimeout = Duration(seconds: 10);
@@ -239,7 +238,7 @@ class _GameplayScreenState extends State<GameplayScreen>
       setState(() {
         _state = GameplayState.wrong;
         _lastAccuracy = 0;
-        _errorMessage = 'No valid WAV recording was captured.';
+        _errorMessage = 'Recording could not be captured.';
       });
       return;
     }
@@ -251,6 +250,7 @@ class _GameplayScreenState extends State<GameplayScreen>
     final result = await _assessmentService.assess(
       word: word,
       recordingPath: recordingPath,
+      age: widget.childAge,
     );
 
     if (!mounted || _state != GameplayState.assessing) return;
@@ -258,7 +258,7 @@ class _GameplayScreenState extends State<GameplayScreen>
     if (result.isSuccess) {
       final score = result.overallScore!.clamp(0, 100).toDouble();
       final feedback = _feedbackForScore(score.round());
-      final passed = score >= _passingScore;
+      final passed = result.passed ?? score >= 80;
       setState(() {
         _state = passed ? GameplayState.correct : GameplayState.wrong;
         _lastAccuracy = score.round();
@@ -367,7 +367,7 @@ class _GameplayScreenState extends State<GameplayScreen>
       );
     }
 
-    if (boundedScore < _passingScore) {
+    if (boundedScore < 80) {
       return const _AccuracyFeedback(
         message: 'Almost there. Say it again.',
         audioAssetPath: AppAssets.almostThereAudio,
@@ -520,7 +520,7 @@ class _GameplayScreenState extends State<GameplayScreen>
         _isLevelOneRecordPending = true;
         _levelOneCountdown = _levelOneRecordingDuration.inSeconds;
         _levelOneRecordProgress = 0;
-        _levelOneErrorMessage = 'No valid WAV recording was captured.';
+        _levelOneErrorMessage = 'Recording could not be captured.';
       });
       _queueLevelOneAutoRecord(selectedWord, ++_levelOneAudioToken);
       return;
@@ -536,6 +536,7 @@ class _GameplayScreenState extends State<GameplayScreen>
     final assessment = await _assessmentService.assess(
       word: selectedWord.model,
       recordingPath: recordingPath,
+      age: widget.childAge,
     );
 
     if (!mounted || _selectedLevelOneWordId != selectedWord.id) return;
@@ -543,7 +544,7 @@ class _GameplayScreenState extends State<GameplayScreen>
     var selectedAccuracy = 100;
     if (assessment.isSuccess) {
       final score = assessment.overallScore!.clamp(0, 100).toDouble();
-      if (score < _passingScore) {
+      if (assessment.passed == false) {
         await _playLevelOneRetryFeedback(selectedWord, score.round());
         return;
       }
@@ -553,6 +554,11 @@ class _GameplayScreenState extends State<GameplayScreen>
         '[level-one] assessment unavailable for ${selectedWord.label}: '
         '${assessment.error}',
       );
+      await _playLevelOneRetryFeedback(selectedWord, 0);
+      setState(() {
+        _levelOneErrorMessage = assessment.error;
+      });
+      return;
     }
 
     final completedWordIds = {
@@ -1225,7 +1231,7 @@ class _LevelOneCompletionBoard extends StatelessWidget {
         ),
         Positioned(
           right: 18,
-          bottom: -24,
+          bottom: -34,
           child: _NextGameplayButton(onTap: onNext),
         ),
       ],
@@ -1277,11 +1283,14 @@ class _NextGameplayButton extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: SvgPicture.asset(
-        'assets/icons/next_gameplay_button.svg',
-        width: 106,
-        height: 36,
-        fit: BoxFit.contain,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        child: SvgPicture.asset(
+          'assets/icons/next_gameplay_button.svg',
+          width: 106,
+          height: 36,
+          fit: BoxFit.contain,
+        ),
       ),
     );
   }
@@ -1419,7 +1428,7 @@ class _ResultPanel extends StatelessWidget {
   final String word;
   final bool correct;
   final int accuracy;
-  final Model2AssessmentResult? assessment;
+  final PhonemeAssessmentResult? assessment;
   final String? errorMessage;
   final String buttonText;
   final VoidCallback onContinue;
@@ -1571,7 +1580,7 @@ class _ResultPanel extends StatelessWidget {
     );
   }
 
-  String? _processSummary(Model2AssessmentResult? result) {
+  String? _processSummary(PhonemeAssessmentResult? result) {
     final processes = result?.assessment?['detected_processes'];
     if (processes is! List || processes.isEmpty) return null;
 

@@ -12,6 +12,7 @@ import '../../core/constants/app_fonts.dart';
 import '../../models/learning_report_model.dart';
 import '../../models/profile_model.dart';
 import '../../screens/gameplay/gameplay_screen.dart';
+import '../../services/audio_recording_service.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/voyage_loading_screen.dart';
 import 'learning_report_page.dart';
@@ -54,6 +55,12 @@ class _HomePageState extends State<HomePage>
       setState(() {
         _isInitialLoading = false;
       });
+    });
+
+    // Request microphone permission early so the OS dialog
+    // appears right after login, not during gameplay/screening.
+    AudioRecordingService().initialize().then((_) {
+      debugPrint('[home] mic_permission_init completed');
     });
   }
 

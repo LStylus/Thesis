@@ -251,6 +251,7 @@ class _ScreeningViewState extends State<_ScreeningView> {
             words: controller.words,
             recordingsByWordId: controller.recordingsByWordId,
             assessmentResultsByWordId: controller.assessmentResultsByWordId,
+            childAge: controller.childAge,
           ),
         ),
       );
@@ -395,9 +396,9 @@ class _ScreeningViewState extends State<_ScreeningView> {
             const SizedBox(width: 22),
             if (!hasRecording)
               RecordingMicButton(
-                isPending: false,
+                isPending: controller.canRecord && !controller.isRecording,
                 isRecording: controller.isRecording,
-                isProcessing: false,
+                isProcessing: controller.isProcessing,
                 progress: controller.recordingProgress,
                 countdown: controller.recordingCountdown,
                 onTap: controller.canRecord

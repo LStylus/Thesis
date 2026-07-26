@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/screening_word_model.dart';
 import '../services/audio_recording_service.dart';
-import '../services/model_2_assessment_service.dart';
+import '../services/phoneme_assessment_service.dart';
 
 class ScreeningController extends ChangeNotifier {
   static const bool _useTestingWordLimit = true;
@@ -16,11 +16,11 @@ class ScreeningController extends ChangeNotifier {
 
   final AudioPlayer _player = AudioPlayer();
   final AudioRecordingService _recordingService = AudioRecordingService();
-  final Model2AssessmentService _assessmentService = Model2AssessmentService();
+  final PhonemeAssessmentService _assessmentService = PhonemeAssessmentService();
 
   late final List<ScreeningWordModel> _words;
   final Map<String, String> _recordingsByWordId = {};
-  final Map<String, Model2AssessmentResult> _assessmentResultsByWordId = {};
+  final Map<String, PhonemeAssessmentResult> _assessmentResultsByWordId = {};
 
   int _currentIndex = 0;
 
@@ -103,7 +103,7 @@ class ScreeningController extends ChangeNotifier {
   ScreeningWordModel get currentWord => _words[_currentIndex];
   Map<String, String> get recordingsByWordId =>
       Map.unmodifiable(_recordingsByWordId);
-  Map<String, Model2AssessmentResult> get assessmentResultsByWordId =>
+  Map<String, PhonemeAssessmentResult> get assessmentResultsByWordId =>
       Map.unmodifiable(_assessmentResultsByWordId);
 
   bool get hasRecording => _recordingsByWordId.containsKey(currentWord.id);
@@ -212,6 +212,7 @@ class ScreeningController extends ChangeNotifier {
         final result = await _assessmentService.assess(
           word: word,
           recordingPath: recordingPath,
+          age: childAge,
         );
 
         if (attempt != _recordingAttempt) return;
@@ -237,8 +238,7 @@ class ScreeningController extends ChangeNotifier {
 
         isProcessing = false;
       } else {
-        errorMessage =
-            'Recording was not saved as a valid WAV. Please try again.';
+        errorMessage = 'Recording could not be captured. Please try again.';
         recordingProgress = 0;
         recordingCountdown = _autoRecordDuration.inSeconds;
         debugPrint('[screening] recording_failed word_id=$wordId');
@@ -292,21 +292,7 @@ class ScreeningController extends ChangeNotifier {
       recordingProgress = 1;
 
       if (finalPath != null && finalPath.isNotEmpty) {
-        final file = File(finalPath);
-
-        await Future.delayed(const Duration(milliseconds: 200));
-
-        if (await file.exists()) {
-          final size = await file.length();
-
-          if (size > 1024) {
-            _recordingsByWordId[currentWord.id] = finalPath;
-          } else {
-            errorMessage = 'Recording was too short. Please try again.';
-          }
-        } else {
-          errorMessage = 'Recording file was not created properly.';
-        }
+        _recordingsByWordId[currentWord.id] = finalPath;
       } else {
         errorMessage = 'No recording was captured.';
       }

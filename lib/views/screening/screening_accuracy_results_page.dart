@@ -14,7 +14,7 @@ import '../../core/constants/app_fonts.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../models/screening_word_model.dart';
-import '../../services/model_2_assessment_service.dart';
+import '../../services/phoneme_assessment_service.dart';
 import '../../widgets/glow_asset_button.dart';
 import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
@@ -23,13 +23,15 @@ import '../auth/auth_gate.dart';
 class ScreeningAccuracyResultsPage extends StatefulWidget {
   final List<ScreeningWordModel> words;
   final Map<String, String> recordingsByWordId;
-  final Map<String, Model2AssessmentResult> assessmentResultsByWordId;
+  final Map<String, PhonemeAssessmentResult> assessmentResultsByWordId;
+  final int childAge;
 
   const ScreeningAccuracyResultsPage({
     super.key,
     required this.words,
     required this.recordingsByWordId,
     required this.assessmentResultsByWordId,
+    required this.childAge,
   });
 
   @override
@@ -39,9 +41,9 @@ class ScreeningAccuracyResultsPage extends StatefulWidget {
 
 class _ScreeningAccuracyResultsPageState
     extends State<ScreeningAccuracyResultsPage> {
-  final Model2AssessmentService _assessmentService = Model2AssessmentService();
+  final PhonemeAssessmentService _assessmentService = PhonemeAssessmentService();
   final AudioPlayer _player = AudioPlayer();
-  final List<Model2AssessmentResult> _results = [];
+  final List<PhonemeAssessmentResult> _results = [];
 
   bool _isRunning = true;
   bool _isSavingProfile = false;
@@ -81,7 +83,7 @@ class _ScreeningAccuracyResultsPageState
         'has_precomputed_result=${precomputedResult != null}',
       );
 
-      final Model2AssessmentResult result;
+      final PhonemeAssessmentResult result;
       if (precomputedResult != null) {
         result = precomputedResult;
         final score = result.overallScore?.toStringAsFixed(2);
@@ -92,7 +94,7 @@ class _ScreeningAccuracyResultsPageState
           'processes=${result.detectedProcessSummary}',
         );
       } else if (recordingPath == null) {
-        result = Model2AssessmentResult.failure(
+        result = PhonemeAssessmentResult.failure(
           word: word,
           recordingPath: '',
           error: 'No recording was captured for this word.',
@@ -105,6 +107,7 @@ class _ScreeningAccuracyResultsPageState
         result = await _assessmentService.assess(
           word: word,
           recordingPath: recordingPath,
+          age: widget.childAge,
         );
       }
 
@@ -173,7 +176,7 @@ class _ScreeningAccuracyResultsPageState
     }).toList();
   }
 
-  void _logDetectedProcesses(Model2AssessmentResult result) {
+  void _logDetectedProcesses(PhonemeAssessmentResult result) {
     final prefix =
         '[screening-api] word=${result.displayWord} word_id=${result.wordId}';
 
@@ -195,7 +198,7 @@ class _ScreeningAccuracyResultsPageState
     }
   }
 
-  Future<void> _playRecording(Model2AssessmentResult result) async {
+  Future<void> _playRecording(PhonemeAssessmentResult result) async {
     final path = result.recordingPath;
     if (path.isEmpty) return;
 
@@ -477,7 +480,7 @@ class _LoadingContent extends StatelessWidget {
 }
 
 class _FigmaResultTile extends StatelessWidget {
-  final Model2AssessmentResult result;
+  final PhonemeAssessmentResult result;
   final bool isPlaying;
   final VoidCallback onPlay;
 
