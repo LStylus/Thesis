@@ -1,12 +1,12 @@
 class AppSpacing {
   static const double pageHorizontalPadding = 28;
   static const double compactPageHorizontalPadding = 24;
-  static const double contentMaxWidth = 356;
+  static const double contentMaxWidth = 430;
 
-  static const double authTopSpacing = 118;
-  static const double authTopSpacingCompact = 82;
-  static const double welcomeTopSpacing = 108;
-  static const double screeningTopSpacing = 92;
+  static const double authTopSpacing = 28;
+  static const double authTopSpacingCompact = 18;
+  static const double welcomeTopSpacing = 18;
+  static const double screeningTopSpacing = 24;
 
   static const double mascotWidth = 304;
   static const double mascotHeight = 170;
@@ -21,9 +21,9 @@ class AppSpacing {
   static const double fieldRadius = 8;
   static const double cardRadius = 8;
 
-  static const double sandHeight = 132;
-  static const double sandWaveHeight = 126;
-  static const double bottomContentPadding = 158;
+  static const double sandHeight = 78;
+  static const double sandWaveHeight = 72;
+  static const double bottomContentPadding = 36;
 
   static const double gapXs = 6;
   static const double gapSm = 11;

@@ -49,7 +49,9 @@ class UserService {
       relationshipToChild: _stringValue(
         legacyProfileData['relationshipToChild'],
       ),
-      profileAssetPath: _stringValue(legacyProfileData['parentProfileAssetPath']),
+      profileAssetPath: _stringValue(
+        legacyProfileData['parentProfileAssetPath'],
+      ),
     );
   }
 
@@ -101,7 +103,10 @@ class UserService {
     final childCountValue = hasChildCount
         ? FieldValue.increment(1)
         : childProfileIds.length;
-    final usedAssets = await _collectUsedProfileAssets(userRef, existingUserData);
+    final usedAssets = await _collectUsedProfileAssets(
+      userRef,
+      existingUserData,
+    );
     final parentProfileAssetPath =
         _stringValue(existingUserData?['parentProfileAssetPath']).isNotEmpty
         ? _stringValue(existingUserData?['parentProfileAssetPath'])
@@ -168,7 +173,9 @@ class UserService {
       final activeProfileId = _stringValue(userData?['activeProfileId']);
       final expectedIds = _profileIdsForUserData(userData);
 
-      return userRef.collection('children').snapshots().asyncMap((snapshot) async {
+      return userRef.collection('children').snapshots().asyncMap((
+        snapshot,
+      ) async {
         final profiles = snapshot.docs
             .map((doc) => ProfileModel.fromMap(doc.data()))
             .toList();
@@ -280,8 +287,9 @@ class UserService {
       profilesById[childProfile.profileId] = childProfile;
     }
 
-    final missingProfileIds = _profileIdsForUserData(userData)
-        .where((profileId) => !profilesById.containsKey(profileId));
+    final missingProfileIds = _profileIdsForUserData(
+      userData,
+    ).where((profileId) => !profilesById.containsKey(profileId));
     final missingProfiles = await _fetchProfilesByIds(missingProfileIds);
     for (final childProfile in missingProfiles) {
       profilesById[childProfile.profileId] = childProfile;
@@ -357,9 +365,9 @@ class UserService {
       profilesById[profile.profileId] = profile;
     }
 
-    final missingProfileIds = _profileIdsForUserData(userData)
-        .where((profileId) => !profilesById.containsKey(profileId))
-        .toList();
+    final missingProfileIds = _profileIdsForUserData(
+      userData,
+    ).where((profileId) => !profilesById.containsKey(profileId)).toList();
     if (missingProfileIds.isNotEmpty) {
       final missingProfiles = await _fetchProfilesByIds(missingProfileIds);
       for (final profile in missingProfiles) {
@@ -374,13 +382,13 @@ class UserService {
       }
     }
 
-    final usedAssets = <String>{
-      ..._stringList(userData['usedProfileAssets']),
-    };
+    final usedAssets = <String>{..._stringList(userData['usedProfileAssets'])};
     final batch = _firestore.batch();
     var hasWrites = false;
 
-    final existingParentAssetPath = _stringValue(userData['parentProfileAssetPath']);
+    final existingParentAssetPath = _stringValue(
+      userData['parentProfileAssetPath'],
+    );
     final parentProfileAssetPath = existingParentAssetPath.isNotEmpty
         ? existingParentAssetPath
         : ProfileAssets.pickUnique(usedAssets, random: Random());
@@ -402,7 +410,8 @@ class UserService {
 
     for (final profile in orderedProfiles) {
       var resolvedAssetPath = profile.profileAssetPath;
-      if (resolvedAssetPath.isEmpty || assignedAssets.contains(resolvedAssetPath)) {
+      if (resolvedAssetPath.isEmpty ||
+          assignedAssets.contains(resolvedAssetPath)) {
         resolvedAssetPath = ProfileAssets.pickUnique(
           assignedAssets,
           random: Random(),
@@ -446,7 +455,9 @@ class UserService {
 
     final finalUsedAssets = assignedAssets.toList();
     final currentUsedAssets = _stringList(userData['usedProfileAssets']);
-    final currentActiveAsset = _stringValue(userData['activeChildProfileAssetPath']);
+    final currentActiveAsset = _stringValue(
+      userData['activeChildProfileAssetPath'],
+    );
     if (!_listsMatchAsSets(currentUsedAssets, finalUsedAssets) ||
         currentActiveAsset != activeChildProfileAssetPath ||
         (currentActiveProfileId.isEmpty && activeProfile != null) ||
@@ -494,9 +505,9 @@ class UserService {
     }
 
     final childDocIds = childSnapshot.docs.map((doc) => doc.id).toSet();
-    final missingProfileIds = _profileIdsForUserData(userData).where(
-      (profileId) => !childDocIds.contains(profileId),
-    );
+    final missingProfileIds = _profileIdsForUserData(
+      userData,
+    ).where((profileId) => !childDocIds.contains(profileId));
     final missingProfiles = await _fetchProfilesByIds(missingProfileIds);
     for (final profile in missingProfiles) {
       if (_normalizeName(profile.childName) == normalizedName) return true;
@@ -559,7 +570,10 @@ class UserService {
         return ProfileModel.fromMap(profileData);
       }
 
-      final childDoc = await userRef.collection('children').doc(profileId).get();
+      final childDoc = await userRef
+          .collection('children')
+          .doc(profileId)
+          .get();
       final childData = childDoc.data();
       if (childData != null) {
         return ProfileModel.fromMap(childData);
@@ -574,7 +588,10 @@ class UserService {
     return _profileFromUserData(uid, userData);
   }
 
-  ProfileModel? _profileFromUserData(String uid, Map<String, dynamic>? userData) {
+  ProfileModel? _profileFromUserData(
+    String uid,
+    Map<String, dynamic>? userData,
+  ) {
     if (userData == null) return null;
 
     final childName = _firstString([
@@ -668,9 +685,7 @@ class UserService {
     DocumentReference<Map<String, dynamic>> userRef,
     Map<String, dynamic>? userData,
   ) async {
-    final usedAssets = <String>{
-      ..._stringList(userData?['usedProfileAssets']),
-    };
+    final usedAssets = <String>{..._stringList(userData?['usedProfileAssets'])};
     final directPaths = [
       _stringValue(userData?['parentProfileAssetPath']),
       _stringValue(userData?['activeChildProfileAssetPath']),
@@ -685,7 +700,9 @@ class UserService {
       }
     }
 
-    final missingProfileIds = _profileIdsForUserData(userData).where((profileId) {
+    final missingProfileIds = _profileIdsForUserData(userData).where((
+      profileId,
+    ) {
       return !childSnapshot.docs.any((doc) => doc.id == profileId);
     });
     final missingProfiles = await _fetchProfilesByIds(missingProfileIds);

@@ -13,15 +13,10 @@ class LearningReportLevelScore {
     this.completedAt,
   });
 
-  String get storageKey => keyFor(
-    activityIndex: activityIndex,
-    levelIndex: levelIndex,
-  );
+  String get storageKey =>
+      keyFor(activityIndex: activityIndex, levelIndex: levelIndex);
 
-  static String keyFor({
-    required int activityIndex,
-    required int levelIndex,
-  }) {
+  static String keyFor({required int activityIndex, required int levelIndex}) {
     return 'activity_${activityIndex + 1}_level_${levelIndex + 1}';
   }
 
@@ -69,7 +64,8 @@ class LearningReportData {
 
   int get learnedWordCount => completedLevelCount * 2;
 
-  int get practiceMinutes => completedLevelCount == 0 ? 0 : completedLevelCount * 5;
+  int get practiceMinutes =>
+      completedLevelCount == 0 ? 0 : completedLevelCount * 5;
 
   int? get averageAccuracy {
     if (levelScores.isEmpty) return null;
@@ -105,9 +101,11 @@ class LearningReportData {
 
     final scores = rawScores.values
         .whereType<Map>()
-        .map((score) => LearningReportLevelScore.fromMap(
-              Map<String, dynamic>.from(score),
-            ))
+        .map(
+          (score) => LearningReportLevelScore.fromMap(
+            Map<String, dynamic>.from(score),
+          ),
+        )
         .toList();
 
     return LearningReportData(levelScores: _sortedScores(scores));

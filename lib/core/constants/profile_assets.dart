@@ -13,7 +13,9 @@ class ProfileAssets {
   ];
 
   static String pickUnique(Set<String> usedAssets, {Random? random}) {
-    final available = all.where((asset) => !usedAssets.contains(asset)).toList();
+    final available = all
+        .where((asset) => !usedAssets.contains(asset))
+        .toList();
     final pool = available.isNotEmpty ? available : all;
     final picker = random ?? Random();
     return pool[picker.nextInt(pool.length)];

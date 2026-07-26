@@ -1,30 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../../core/constants/app_fonts.dart';
-import '../../core/constants/app_spacing.dart';
-import '../../core/constants/app_text_styles.dart';
-import '../../widgets/ocean_auth_scaffold.dart';
+import '../../widgets/credentials_auth_scaffold.dart';
+import '../../widgets/primary_button.dart';
 import 'login_page.dart';
 
-class WelcomePage extends StatefulWidget {
+class WelcomePage extends StatelessWidget {
   const WelcomePage({super.key});
 
-  @override
-  State<WelcomePage> createState() => _WelcomePageState();
-}
-
-class _WelcomePageState extends State<WelcomePage> {
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-  }
-
-  void _continue() {
+  void _continue(BuildContext context) {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (_) => const LoginPage()),
@@ -33,27 +17,23 @@ class _WelcomePageState extends State<WelcomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: _continue,
-      child: const OceanAuthScaffold(
-        topSpacing: AppSpacing.welcomeTopSpacing,
-        showMascot: false,
-        bottomPadding: AppSpacing.bottomContentPadding,
+    final dense = MediaQuery.sizeOf(context).height < 420;
+
+    return VoyageFlowScaffold(
+      eyebrow: 'Assistive speech practice',
+      title: 'Welcome aboard',
+      subtitle: 'A playful space for children to practice speech sounds.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _WelcomeHero(),
-          SizedBox(height: AppSpacing.gap2xl),
-          FigmaWhaleMascot(
-            width: AppSpacing.welcomeMascotWidth,
-            height: AppSpacing.welcomeMascotHeight,
-          ),
-          SizedBox(height: 34),
-          _DisclaimerCard(),
-          SizedBox(height: 56),
-          Text(
-            'tap anywhere on the screen to continue',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.subtitle,
+          const _DisclaimerNotice(),
+          SizedBox(height: dense ? 10 : 20),
+          PrimaryButton(
+            text: 'Continue',
+            onPressed: () => _continue(context),
+            height: dense ? 48 : 56,
+            borderRadius: 8,
+            trailingIcon: Icons.arrow_forward_rounded,
           ),
         ],
       ),
@@ -61,115 +41,71 @@ class _WelcomePageState extends State<WelcomePage> {
   }
 }
 
-class _WelcomeHero extends StatelessWidget {
-  const _WelcomeHero();
+class _DisclaimerNotice extends StatelessWidget {
+  const _DisclaimerNotice();
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      children: [
-        Text(
-          'welcome to',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.subtitle,
-        ),
-        SizedBox(height: 2),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            'VOICE VOYAGE',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.appTitle,
-          ),
-        ),
-        SizedBox(height: 2),
-        Text(
-          'your learning experience is ready.',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.helper,
-        ),
-      ],
-    );
-  }
-}
+    final dense = MediaQuery.sizeOf(context).height < 420;
 
-class _DisclaimerCard extends StatelessWidget {
-  const _DisclaimerCard();
-
-  @override
-  Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      constraints: const BoxConstraints(minHeight: 148),
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 22),
+      padding: EdgeInsets.all(dense ? 12 : 18),
       decoration: BoxDecoration(
-        color: const Color(0xFF66D4F1),
-        borderRadius: BorderRadius.circular(AppSpacing.cardRadius),
+        color: const Color(0xFFF2FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFCFE8EE)),
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Positioned(
-            left: -7,
-            bottom: -8,
-            child: _DisclaimerBubble(size: 48, opacity: 0.18),
+          Container(
+            width: dense ? 36 : 42,
+            height: dense ? 36 : 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: const Color(0xFFDFF5FA),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.health_and_safety_outlined,
+              color: const Color(0xFF168DB5),
+              size: dense ? 21 : 24,
+            ),
           ),
-          const Positioned(
-            left: 22,
-            top: -5,
-            child: _DisclaimerBubble(size: 14, opacity: 0.24),
-          ),
-          const Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'DISCLAIMER',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF206F91),
-                  fontFamily: AppFonts.fredokaOne,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: 0,
+          const SizedBox(width: 14),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'DISCLAIMER',
+                  style: TextStyle(
+                    color: Color(0xFF176D8B),
+                    fontFamily: AppFonts.fredokaOne,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 0,
+                  ),
                 ),
-              ),
-              SizedBox(height: 10),
-              Text(
-                'Voice Voyage is only an assistive application for speech practice. '
-                'Any existing and underlying health conditions affecting child\'s '
-                'speech must be consulted with domain experts.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF2B7897),
-                  fontFamily: AppFonts.fredoka,
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w500,
-                  height: 1.24,
-                  letterSpacing: 0,
+                SizedBox(height: 5),
+                Text(
+                  'Voice Voyage is an assistive speech-practice application, '
+                  'not a medical diagnosis. Concerns about a child\'s speech or '
+                  'underlying health conditions should be discussed with a '
+                  'qualified professional.',
+                  style: TextStyle(
+                    color: Color(0xFF426674),
+                    fontFamily: AppFonts.fredoka,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w500,
+                    height: 1.28,
+                    letterSpacing: 0,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DisclaimerBubble extends StatelessWidget {
-  final double size;
-  final double opacity;
-
-  const _DisclaimerBubble({required this.size, required this.opacity});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: opacity),
-        shape: BoxShape.circle,
       ),
     );
   }

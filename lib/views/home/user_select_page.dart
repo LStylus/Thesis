@@ -293,9 +293,11 @@ class _UserSelectPageState extends State<UserSelectPage> {
                                   scrollDirection: Axis.horizontal,
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      for (final profile in orderedProfiles) ...[
+                                      for (final profile
+                                          in orderedProfiles) ...[
                                         _ProfileChoiceTile(
                                           profile: profile,
                                           isActive:
@@ -319,10 +321,7 @@ class _UserSelectPageState extends State<UserSelectPage> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            _LogoutButton(
-                              isEnabled: !_isBusy,
-                              onTap: _signOut,
-                            ),
+                            _LogoutButton(isEnabled: !_isBusy, onTap: _signOut),
                           ],
                         ),
                       ),
@@ -379,10 +378,7 @@ class _LogoutButton extends StatelessWidget {
   final bool isEnabled;
   final VoidCallback onTap;
 
-  const _LogoutButton({
-    required this.isEnabled,
-    required this.onTap,
-  });
+  const _LogoutButton({required this.isEnabled, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -416,10 +412,7 @@ class _AddChildTile extends StatelessWidget {
   final bool isEnabled;
   final VoidCallback onTap;
 
-  const _AddChildTile({
-    required this.isEnabled,
-    required this.onTap,
-  });
+  const _AddChildTile({required this.isEnabled, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

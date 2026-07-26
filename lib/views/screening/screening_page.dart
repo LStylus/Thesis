@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/auth_controller.dart';
@@ -7,12 +6,10 @@ import '../../controllers/screening_controller.dart';
 import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
-import '../../core/constants/app_spacing.dart';
-import '../../core/constants/app_text_styles.dart';
 import '../../models/screening_word_model.dart';
 import '../../widgets/countdown_mic_button.dart';
+import '../../widgets/credentials_auth_scaffold.dart';
 import '../../widgets/glow_asset_button.dart';
-import '../../widgets/ocean_auth_scaffold.dart';
 import '../../widgets/primary_button.dart';
 import '../auth/auth_gate.dart';
 import 'screening_accuracy_results_page.dart';
@@ -27,19 +24,11 @@ class StartScreeningPage extends StatefulWidget {
 }
 
 class _StartScreeningPageState extends State<StartScreeningPage> {
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-  }
-
   void _startScreening(BuildContext context) {
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(
-          builder: (_) => ScreeningPage(childAge: widget.childAge)),
+        builder: (_) => ScreeningPage(childAge: widget.childAge),
+      ),
     );
   }
 
@@ -51,11 +40,6 @@ class _StartScreeningPageState extends State<StartScreeningPage> {
     if (!context.mounted) return;
 
     if (isExisting) {
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      if (!context.mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const AuthGate()),
         (route) => false,
@@ -68,6 +52,7 @@ class _StartScreeningPageState extends State<StartScreeningPage> {
   @override
   Widget build(BuildContext context) {
     final wordCount = ScreeningWordModel.resolveForAge(widget.childAge).length;
+    final dense = MediaQuery.sizeOf(context).height < 420;
 
     return PopScope(
       canPop: false,
@@ -76,54 +61,76 @@ class _StartScreeningPageState extends State<StartScreeningPage> {
           _goHome(context);
         }
       },
-      child: OceanAuthScaffold(
-        showMascot: false,
-        topSpacing: AppSpacing.screeningTopSpacing,
+      child: VoyageFlowScaffold(
+        eyebrow: 'Baseline check',
+        onClose: () => _goHome(context),
+        title: 'Speech sound screening',
+        subtitle: 'A short baseline before the first practice voyage.',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _ScreeningSummaryPanel(
+              wordCount: wordCount,
+              childAge: widget.childAge,
+            ),
+            SizedBox(height: dense ? 10 : 20),
+            PrimaryButton(
+              text: 'Start screening',
+              onPressed: () => _startScreening(context),
+              height: dense ? 48 : 56,
+              borderRadius: 8,
+              trailingIcon: Icons.arrow_forward_rounded,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScreeningSummaryPanel extends StatelessWidget {
+  final int wordCount;
+  final int childAge;
+
+  const _ScreeningSummaryPanel({
+    required this.wordCount,
+    required this.childAge,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final dense = MediaQuery.sizeOf(context).height < 420;
+
+    return Container(
+      padding: EdgeInsets.all(dense ? 10 : 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2FAFC),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFFCFE8EE)),
+      ),
+      child: Row(
         children: [
-          const Text(
-            'Voice Voyage\nSpeech Sound Screening',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.screeningTitle,
+          Expanded(
+            child: _ScreeningStat(
+              icon: Icons.format_list_numbered_rounded,
+              value: '$wordCount',
+              label: 'words',
+            ),
           ),
-          const SizedBox(height: AppSpacing.gapXs),
-          const Text(
-            "assess your child's speech acquisition",
-            textAlign: TextAlign.center,
-            style: AppTextStyles.helper,
+          const SizedBox(width: 10),
+          Expanded(
+            child: _ScreeningStat(
+              icon: Icons.child_care_rounded,
+              value: '$childAge',
+              label: 'years old',
+            ),
           ),
-          const SizedBox(height: 30),
-          const FigmaWhaleMascot(
-            width: AppSpacing.compactMascotWidth,
-            height: AppSpacing.compactMascotHeight,
-          ),
-          const SizedBox(height: 30),
-          _ScreeningFeatureList(
-            items: [
-              'A total of $wordCount words',
-              'AI-assisted speech recognition',
-              'Instant phonological accuracy results',
-              'Personalized content mapping',
-            ],
-          ),
-          const SizedBox(height: 42),
-          PrimaryButton(
-            text: 'Start Screening',
-            onPressed: () => _startScreening(context),
-          ),
-          const SizedBox(height: 18),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => _goHome(context),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-              child: Text(
-                'cancel',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.helper.copyWith(
-                  color: AppColors.softTextGray,
-                  fontSize: 14,
-                ),
-              ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: _ScreeningStat(
+              icon: Icons.mic_none_rounded,
+              value: 'Quiet',
+              label: 'recording space',
             ),
           ),
         ],
@@ -132,40 +139,54 @@ class _StartScreeningPageState extends State<StartScreeningPage> {
   }
 }
 
-class _ScreeningFeatureList extends StatelessWidget {
-  final List<String> items;
+class _ScreeningStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
 
-  const _ScreeningFeatureList({required this.items});
+  const _ScreeningStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final item in items) ...[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.check_circle_outline_rounded,
-                  color: AppColors.primary,
-                  size: 22,
-                ),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Text(
-                    item,
-                    style: AppTextStyles.helper.copyWith(fontSize: 13.5),
-                  ),
-                ),
-              ],
+    final dense = MediaQuery.sizeOf(context).height < 420;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: AppColors.primaryShadow, size: dense ? 20 : 24),
+        SizedBox(height: dense ? 3 : 6),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: const Color(0xFF124B63),
+              fontFamily: AppFonts.fredokaOne,
+              fontSize: dense ? 15 : 18,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 0,
             ),
-            if (item != items.last) const SizedBox(height: 12),
-          ],
-        ],
-      ),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: const Color(0xFF66818D),
+            fontFamily: AppFonts.fredoka,
+            fontSize: dense ? 10 : 11.5,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -198,15 +219,6 @@ class _ScreeningViewState extends State<_ScreeningView> {
   bool _isResettingWord = false;
   bool _isAdvancingWord = false;
 
-  @override
-  void initState() {
-    super.initState();
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-  }
-
   Future<void> _exitScreening(ScreeningController controller) async {
     final authController = context.read<AuthController>();
     final isExisting = authController.isExistingParentSession;
@@ -217,11 +229,6 @@ class _ScreeningViewState extends State<_ScreeningView> {
     if (!mounted) return;
 
     if (isExisting) {
-      await SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const AuthGate()),
         (route) => false,
@@ -303,146 +310,188 @@ class _ScreeningViewState extends State<_ScreeningView> {
   Widget _buildRecordingScreen(ScreeningController controller) {
     final hasRecording = controller.hasRecording;
     final controlsDisabled = controller.isRecording || controller.isProcessing;
+    final dense = MediaQuery.sizeOf(context).height < 420;
+    final controlSize = dense ? 60.0 : 72.0;
 
-    return OceanAuthScaffold(
-      showMascot: false,
-      showSandDecoration: false,
-      topSpacing: AppSpacing.authTopSpacingCompact,
-      bottomPadding: 28,
-      leading: OceanCloseButton(onPressed: () => _exitScreening(controller)),
-      children: [
-        const Text(
-          'Voice Voyage\nSpeech Sound Screening',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.screeningTitle,
-        ),
-        const SizedBox(height: AppSpacing.gapXs),
-        Text(
-          '${controller.currentStep} of ${controller.totalSteps}',
-          textAlign: TextAlign.center,
-          style: AppTextStyles.helper.copyWith(fontSize: 14),
-        ),
-        const SizedBox(height: 24),
-        const FigmaWhaleMascot(
-          width: AppSpacing.compactMascotWidth,
-          height: AppSpacing.compactMascotHeight,
-        ),
-        const SizedBox(height: 20),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            controller.currentWord.displayWord.toUpperCase(),
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.primary,
-              fontFamily: AppFonts.fredokaOne,
-              fontSize: 28,
-              fontWeight: FontWeight.w400,
-              height: 1,
-              letterSpacing: 0,
+    return VoyageFlowScaffold(
+      currentStep: controller.currentStep,
+      totalSteps: controller.totalSteps,
+      onClose: () => _exitScreening(controller),
+      title: 'Say the word',
+      subtitle: _instructionFor(controller),
+      contentMaxWidth: 560,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: dense ? 14 : 20,
+              vertical: dense ? 10 : 16,
+            ),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF2FAFC),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFFCFE8EE)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: dense ? 36 : 44,
+                  height: dense ? 36 : 44,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    controller.isProcessing
+                        ? Icons.graphic_eq_rounded
+                        : Icons.record_voice_over_outlined,
+                    color: controller.isProcessing
+                        ? const Color(0xFFE49A2F)
+                        : AppColors.primaryShadow,
+                    size: dense ? 21 : 25,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      controller.currentWord.displayWord.toUpperCase(),
+                      style: TextStyle(
+                        color: const Color(0xFF124B63),
+                        fontFamily: AppFonts.fredokaOne,
+                        fontSize: dense ? 32 : 42,
+                        fontWeight: FontWeight.w400,
+                        height: 1,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                ),
+                if (controller.isRecording)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFEEF1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${controller.recordingCountdown}s',
+                      style: const TextStyle(
+                        color: Color(0xFFC8485E),
+                        fontFamily: AppFonts.fredokaOne,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 36),
-        SizedBox(
-          width: 280,
-          child: Text(
-            _instructionFor(controller),
-            textAlign: TextAlign.center,
-            style: AppTextStyles.helper,
+          if (controller.errorMessage != null) ...[
+            const SizedBox(height: 10),
+            CredentialsErrorBanner(message: controller.errorMessage!),
+          ],
+          SizedBox(height: dense ? 10 : 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (!hasRecording)
+                GlowAssetButton(
+                  assetPath: AppAssets.playButton,
+                  semanticsLabel: 'Play prompt',
+                  isActive: controller.isPromptPlaying,
+                  onTap: controller.canPlayPrompt
+                      ? controller.playPromptAudio
+                      : null,
+                  size: controlSize,
+                )
+              else
+                GlowAssetButton(
+                  assetPath: AppAssets.tryAgainButton,
+                  semanticsLabel: 'Try again',
+                  isActive: _isResettingWord,
+                  onTap: controlsDisabled
+                      ? null
+                      : () => _runPulsedAction(
+                          isRunning: _isResettingWord,
+                          setFlag: (value) => _isResettingWord = value,
+                          action: controller.repeatCurrentWord,
+                        ),
+                  size: controlSize,
+                ),
+              const SizedBox(width: 20),
+              if (controller.isProcessing)
+                RecordingMicButton(
+                  isPending: false,
+                  isRecording: false,
+                  isProcessing: true,
+                  progress: controller.recordingProgress,
+                  countdown: controller.recordingCountdown,
+                  size: controlSize,
+                )
+              else if (!hasRecording)
+                RecordingMicButton(
+                  isPending: false,
+                  isRecording: controller.isRecording,
+                  isProcessing: false,
+                  progress: controller.recordingProgress,
+                  countdown: controller.recordingCountdown,
+                  onTap: controller.canRecord
+                      ? controller.startTimedRecording
+                      : null,
+                  size: controlSize,
+                )
+              else
+                GlowAssetButton(
+                  assetPath: AppAssets.nextButton,
+                  semanticsLabel: 'Next word',
+                  isActive: _isAdvancingWord,
+                  onTap: controlsDisabled
+                      ? null
+                      : () => _runPulsedAction(
+                          isRunning: _isAdvancingWord,
+                          setFlag: (value) => _isAdvancingWord = value,
+                          action: () => _handleNext(controller),
+                        ),
+                  size: controlSize,
+                ),
+            ],
           ),
-        ),
-        if (controller.errorMessage != null) ...[
-          const SizedBox(height: 10),
-          SizedBox(
-            width: 280,
-            child: Text(
-              controller.errorMessage!,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.helper.copyWith(
-                color: AppColors.error,
-                fontWeight: FontWeight.w600,
+          SizedBox(height: dense ? 8 : 16),
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.info_outline_rounded,
+                color: Color(0xFF78909A),
+                size: 17,
               ),
-            ),
+              SizedBox(width: 7),
+              Flexible(
+                child: Text(
+                  'Record in a quiet space with the microphone unobstructed.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Color(0xFF78909A),
+                    fontFamily: AppFonts.fredoka,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
-        const SizedBox(height: 26),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (!hasRecording)
-              GlowAssetButton(
-                assetPath: AppAssets.playButton,
-                semanticsLabel: 'Play prompt',
-                isActive: controller.isPromptPlaying,
-                onTap: controller.canPlayPrompt
-                    ? controller.playPromptAudio
-                    : null,
-              )
-            else
-              GlowAssetButton(
-                assetPath: AppAssets.tryAgainButton,
-                semanticsLabel: 'Try again',
-                isActive: _isResettingWord,
-                onTap: controlsDisabled
-                    ? null
-                    : () => _runPulsedAction(
-                        isRunning: _isResettingWord,
-                        setFlag: (value) => _isResettingWord = value,
-                        action: controller.repeatCurrentWord,
-                      ),
-              ),
-            const SizedBox(width: 22),
-            if (!hasRecording)
-              RecordingMicButton(
-                isPending: false,
-                isRecording: controller.isRecording,
-                isProcessing: false,
-                progress: controller.recordingProgress,
-                countdown: controller.recordingCountdown,
-                onTap: controller.canRecord
-                    ? controller.startTimedRecording
-                    : null,
-                size: 72,
-              )
-            else
-              GlowAssetButton(
-                assetPath: AppAssets.nextButton,
-                semanticsLabel: 'Next word',
-                isActive: _isAdvancingWord,
-                onTap: controlsDisabled
-                    ? null
-                    : () => _runPulsedAction(
-                        isRunning: _isAdvancingWord,
-                        setFlag: (value) => _isAdvancingWord = value,
-                        action: () => _handleNext(controller),
-                      ),
-              ),
-          ],
-        ),
-        const SizedBox(height: 34),
-        const Text(
-          'NOTICE!',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.textGray,
-            fontFamily: AppFonts.fredokaOne,
-            fontSize: 10,
-            fontWeight: FontWeight.w400,
-            height: 1,
-            letterSpacing: 0,
-          ),
-        ),
-        const SizedBox(height: 3),
-        const SizedBox(
-          width: 250,
-          child: Text(
-            'Please ensure your microphone is working and you are in a quiet environment.',
-            textAlign: TextAlign.center,
-            style: AppTextStyles.helper,
-          ),
-        ),
-      ],
+      ),
     );
   }
 

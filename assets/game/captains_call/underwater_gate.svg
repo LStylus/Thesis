@@ -1,0 +1,16 @@
+<svg width="256" height="256" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <linearGradient id="whale" x1="52" y1="48" x2="184" y2="206" gradientUnits="userSpaceOnUse"><stop stop-color="#55D9FF"/><stop offset="0.58" stop-color="#00BBF9"/><stop offset="1" stop-color="#087EBA"/></linearGradient>
+  <linearGradient id="belly" x1="96" y1="118" x2="150" y2="205" gradientUnits="userSpaceOnUse"><stop stop-color="#FFF5F8"/><stop offset="1" stop-color="#F5B7C6"/></linearGradient>
+  <linearGradient id="coral" x1="40" y1="40" x2="204" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#FF9DB1"/><stop offset="1" stop-color="#E74669"/></linearGradient>
+  <linearGradient id="gold" x1="56" y1="42" x2="194" y2="216" gradientUnits="userSpaceOnUse"><stop stop-color="#FFE98A"/><stop offset="0.55" stop-color="#FFC94F"/><stop offset="1" stop-color="#E99724"/></linearGradient>
+  <linearGradient id="teal" x1="48" y1="44" x2="204" y2="216" gradientUnits="userSpaceOnUse"><stop stop-color="#69E1D0"/><stop offset="1" stop-color="#139B9D"/></linearGradient>
+  <linearGradient id="blue" x1="44" y1="32" x2="206" y2="224" gradientUnits="userSpaceOnUse"><stop stop-color="#B9F5FF"/><stop offset="0.55" stop-color="#58D9F2"/><stop offset="1" stop-color="#2687CF"/></linearGradient>
+  <linearGradient id="purple" x1="56" y1="40" x2="196" y2="220" gradientUnits="userSpaceOnUse"><stop stop-color="#C5A5FF"/><stop offset="1" stop-color="#7157C8"/></linearGradient>
+  <radialGradient id="glow"><stop stop-color="#FFF9B8"/><stop offset="0.45" stop-color="#FFD85E" stop-opacity=".8"/><stop offset="1" stop-color="#FFD85E" stop-opacity="0"/></radialGradient>
+  <radialGradient id="bubble"><stop stop-color="#FFFFFF" stop-opacity=".7"/><stop offset=".45" stop-color="#9CEEFF" stop-opacity=".34"/><stop offset="1" stop-color="#44CBEF" stop-opacity=".16"/></radialGradient>
+</defs>
+<path d="M39 229V92c0-39 39-68 89-68s89 29 89 68v137" fill="#173F61" stroke="url(#gold)" stroke-width="12"/>
+<path d="M67 225V101c0-28 27-47 61-47s61 19 61 47v124" fill="url(#teal)" stroke="#176F75" stroke-width="8"/>
+<path d="M128 55v170M67 128h122" stroke="#FFD45E" stroke-width="8"/><circle cx="128" cy="128" r="31" fill="#173F61" stroke="#FFD45E" stroke-width="8"/><path d="M128 106v44M106 128h44" stroke="#FFD45E" stroke-width="7"/>
+</svg>
