@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../gamescene/game_scene_state.dart';
-import '../../../services/model_2_assessment_service.dart';
+import '../../../services/phoneme_assessment_service.dart';
 import '../domain/game_level_config.dart';
 import '../domain/game_level_kind.dart';
 import '../domain/game_result.dart';

@@ -7,15 +7,16 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../../../models/screening_word_model.dart';
-import '../../../services/model_2_assessment_service.dart';
+import '../../../services/phoneme_assessment_service.dart';
 
 class ScreeningResultsController extends ChangeNotifier {
   final List<ScreeningWordModel> words;
   final Map<String, String> recordingsByWordId;
-  final Map<String, Model2AssessmentResult> assessmentResultsByWordId;
-  final Model2AssessmentService _assessmentService;
+  final Map<String, PhonemeAssessmentResult> assessmentResultsByWordId;
+  final PhonemeAssessmentService _assessmentService;
   final AudioPlayer _player;
-  final List<Model2AssessmentResult> _results = [];
+  final List<PhonemeAssessmentResult> _results = [];
+  final Set<String> _failedWordIds = {};
 
   bool _isRunning = true;
   int _processedCount = 0;
@@ -27,7 +28,7 @@ class ScreeningResultsController extends ChangeNotifier {
     required this.words,
     required this.recordingsByWordId,
     required this.assessmentResultsByWordId,
-    required Model2AssessmentService assessmentService,
+    required PhonemeAssessmentService assessmentService,
     required AudioPlayer player,
   }) : _assessmentService = assessmentService,
        _player = player;
@@ -35,21 +36,22 @@ class ScreeningResultsController extends ChangeNotifier {
   factory ScreeningResultsController.createDefault({
     required List<ScreeningWordModel> words,
     required Map<String, String> recordingsByWordId,
-    required Map<String, Model2AssessmentResult> assessmentResultsByWordId,
+    required Map<String, PhonemeAssessmentResult> assessmentResultsByWordId,
   }) {
     return ScreeningResultsController(
       words: words,
       recordingsByWordId: recordingsByWordId,
       assessmentResultsByWordId: assessmentResultsByWordId,
-      assessmentService: Model2AssessmentService(),
+      assessmentService: PhonemeAssessmentService(),
       player: AudioPlayer(),
     );
   }
 
-  List<Model2AssessmentResult> get results => List.unmodifiable(_results);
+  List<PhonemeAssessmentResult> get results => List.unmodifiable(_results);
   bool get isRunning => _isRunning;
   int get processedCount => _processedCount;
   String? get playingWordId => _playingWordId;
+  Set<String> get failedWordIds => Set.unmodifiable(_failedWordIds);
 
   Future<void> start() async {
     debugPrint(
@@ -70,7 +72,7 @@ class ScreeningResultsController extends ChangeNotifier {
         'has_precomputed_result=${precomputedResult != null}',
       );
 
-      final Model2AssessmentResult result;
+      final PhonemeAssessmentResult result;
       if (precomputedResult != null) {
         result = precomputedResult;
         final score = result.overallScore?.toStringAsFixed(2);
@@ -81,7 +83,7 @@ class ScreeningResultsController extends ChangeNotifier {
           'processes=${result.detectedProcessSummary}',
         );
       } else if (recordingPath == null) {
-        result = Model2AssessmentResult.failure(
+        result = PhonemeAssessmentResult.failure(
           word: word,
           recordingPath: '',
           error: 'No recording was captured for this word.',
@@ -102,6 +104,11 @@ class ScreeningResultsController extends ChangeNotifier {
 
       _results.add(result);
       _processedCount++;
+      if (!result.isSuccess) {
+        _failedWordIds.add(word.id);
+      } else {
+        _failedWordIds.remove(word.id);
+      }
       notifyListeners();
     }
 
@@ -117,7 +124,7 @@ class ScreeningResultsController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> playRecording(Model2AssessmentResult result) async {
+  Future<void> playRecording(PhonemeAssessmentResult result) async {
     final path = result.recordingPath;
     if (path.isEmpty) return;
 
@@ -186,7 +193,7 @@ class ScreeningResultsController extends ChangeNotifier {
     }).toList();
   }
 
-  void _logDetectedProcesses(Model2AssessmentResult result) {
+  void _logDetectedProcesses(PhonemeAssessmentResult result) {
     final prefix =
         '[screening-api] word=${result.displayWord} word_id=${result.wordId}';
 
@@ -206,6 +213,56 @@ class ScreeningResultsController extends ChangeNotifier {
       final detail = process['detail'];
       debugPrint('$prefix process=$name position=$position detail=$detail');
     }
+  }
+
+  /// Retry assessment for a specific word that previously failed.
+  ///
+  /// Re-assesses the word and replaces the failure result in-place.
+  /// Returns `true` if the word was a known failure and a retry was attempted.
+  Future<bool> retryWord(String wordId) async {
+    final word = words.firstWhere(
+      (w) => w.id == wordId,
+      orElse: () => throw ArgumentError('Word $wordId not found in screening'),
+    );
+    final recordingPath = recordingsByWordId[wordId];
+    if (recordingPath == null || recordingPath.isEmpty) {
+      debugPrint(
+        '[screening-api] retry_abort word_id=$wordId reason=no_recording',
+      );
+      return false;
+    }
+
+    debugPrint(
+      '[screening-api] retry_start word=${word.displayWord} word_id=$wordId '
+      'path=$recordingPath',
+    );
+
+    final result = await _assessmentService.assess(
+      word: word,
+      recordingPath: recordingPath,
+    );
+
+    _logDetectedProcesses(result);
+    if (_disposed) return true;
+
+    // Replace the old result in-place
+    final index = _results.indexWhere((r) => r.wordId == wordId);
+    if (index != -1) {
+      _results[index] = result;
+    } else {
+      _results.add(result);
+    }
+
+    if (result.isSuccess) {
+      _failedWordIds.remove(wordId);
+    }
+    notifyListeners();
+
+    debugPrint(
+      '[screening-api] retry_complete word_id=$wordId '
+      'success=${result.isSuccess} score=${result.overallScore}',
+    );
+    return true;
   }
 
   @override

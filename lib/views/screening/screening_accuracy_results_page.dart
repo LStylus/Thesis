@@ -7,7 +7,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
 import '../../features/screening/application/screening_results_controller.dart';
 import '../../models/screening_word_model.dart';
-import '../../services/model_2_assessment_service.dart';
+import '../../services/phoneme_assessment_service.dart';
 import '../../widgets/credentials_auth_scaffold.dart';
 import '../../widgets/glow_asset_button.dart';
 import '../../widgets/primary_button.dart';
@@ -18,7 +18,7 @@ part 'screening_results_widgets.dart';
 class ScreeningAccuracyResultsPage extends StatefulWidget {
   final List<ScreeningWordModel> words;
   final Map<String, String> recordingsByWordId;
-  final Map<String, Model2AssessmentResult> assessmentResultsByWordId;
+  final Map<String, PhonemeAssessmentResult> assessmentResultsByWordId;
 
   const ScreeningAccuracyResultsPage({
     super.key,

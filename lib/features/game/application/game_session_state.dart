@@ -1,5 +1,5 @@
 import '../../../gamescene/game_scene_state.dart';
-import '../../../services/model_2_assessment_service.dart';
+import '../../../services/phoneme_assessment_service.dart';
 import '../domain/game_level_config.dart';
 import '../domain/game_target.dart';
 
@@ -14,7 +14,7 @@ class GameSessionState {
   final int countdown;
   final double recordProgress;
   final int? lastAccuracy;
-  final Model2AssessmentResult? lastAssessment;
+  final PhonemeAssessmentResult? lastAssessment;
   final String? message;
   final Set<String> completedTargetIds;
   final Set<String> needsPracticeTargetIds;
@@ -105,7 +105,7 @@ class GameSessionState {
           : lastAccuracy as int?,
       lastAssessment: identical(lastAssessment, _unset)
           ? this.lastAssessment
-          : lastAssessment as Model2AssessmentResult?,
+          : lastAssessment as PhonemeAssessmentResult?,
       message: identical(message, _unset) ? this.message : message as String?,
       completedTargetIds: completedTargetIds ?? this.completedTargetIds,
       needsPracticeTargetIds:

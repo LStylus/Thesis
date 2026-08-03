@@ -177,7 +177,7 @@ extension GameSessionFlow on GameSessionController {
   Future<void> _completeCurrentTarget(
     int token,
     int score,
-    Model2AssessmentResult assessment, {
+    PhonemeAssessmentResult assessment, {
     bool assisted = false,
   }) async {
     final target = _state.currentTarget;

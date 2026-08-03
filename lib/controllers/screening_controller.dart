@@ -212,7 +212,6 @@ class ScreeningController extends ChangeNotifier {
         final result = await _assessmentService.assess(
           word: word,
           recordingPath: recordingPath,
-          age: childAge,
         );
 
         if (attempt != _recordingAttempt) return;

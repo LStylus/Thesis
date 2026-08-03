@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -21,6 +22,9 @@ class PhonemeAssessmentService {
     return 'http://127.0.0.1:8001';
   }
 
+  static const int _maxRetries = 3;
+  static const Duration _baseDelay = Duration(milliseconds: 500);
+
   Uri get _assessUri {
     return Uri.parse('${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/assess');
   }
@@ -28,12 +32,11 @@ class PhonemeAssessmentService {
   Future<PhonemeAssessmentResult> assess({
     required ScreeningWordModel word,
     required String recordingPath,
-    required int age,
   }) async {
     final requestStartedAt = DateTime.now();
     debugPrint(
       '[phoneme-api] assess_start word=${word.displayWord} '
-      'word_id=${word.id} age_years=$age base_url=$baseUrl uri=$_assessUri '
+      'word_id=${word.id} age=${word.age} base_url=$baseUrl uri=$_assessUri '
       'recording_path=$recordingPath',
     );
 
@@ -49,16 +52,33 @@ class PhonemeAssessmentService {
       );
     }
 
+    return _withRetry(
+      attempt: 0,
+      word: word,
+      recordingPath: recordingPath,
+      file: file,
+      requestStartedAt: requestStartedAt,
+    );
+  }
+
+  Future<PhonemeAssessmentResult> _withRetry({
+    required int attempt,
+    required ScreeningWordModel word,
+    required String recordingPath,
+    required File file,
+    required DateTime requestStartedAt,
+  }) async {
     try {
       final fileSize = await file.length();
       debugPrint(
         '[phoneme-api] upload_prepare word_id=${word.id} '
+        'attempt=${attempt + 1}/$_maxRetries '
         'filename=${_filenameFromPath(recordingPath)} bytes=$fileSize',
       );
 
       final request = http.MultipartRequest('POST', _assessUri)
         ..fields['word'] = word.displayWord.toLowerCase()
-        ..fields['age'] = age.toString()
+        ..fields['age'] = word.age.toString()
         ..files.add(
           await http.MultipartFile.fromPath(
             'file',
@@ -99,7 +119,7 @@ class PhonemeAssessmentService {
       }
 
       // Check for model-level or FastAPI validation error in the body
-      // regardless of HTTP status (model returns 400 with {"error": ...})
+      // regardless of HTTP status
       if (decoded != null) {
         final bodyError = _extractBodyError(decoded);
         if (bodyError != null) {
@@ -114,6 +134,19 @@ class PhonemeAssessmentService {
             rawResponse: decoded,
           );
         }
+      }
+
+      // Retry on 5xx (server errors); pass through 4xx immediately
+      if (response.statusCode >= 500 && response.statusCode < 600) {
+        return _retryOrFail(
+          attempt: attempt,
+          word: word,
+          recordingPath: recordingPath,
+          file: file,
+          requestStartedAt: requestStartedAt,
+          error: 'Phoneme model returned HTTP ${response.statusCode}.',
+          rawBody: response.body,
+        );
       }
 
       // Fall back to HTTP status if no body error was found
@@ -149,17 +182,21 @@ class PhonemeAssessmentService {
       );
       return success;
     } on TimeoutException {
-      debugPrint('[phoneme-api] timeout word_id=${word.id} uri=$_assessUri');
-      return PhonemeAssessmentResult.failure(
+      return _retryOrFail(
+        attempt: attempt,
         word: word,
         recordingPath: recordingPath,
+        file: file,
+        requestStartedAt: requestStartedAt,
         error: 'Phoneme model request timed out.',
       );
     } on SocketException {
-      debugPrint('[phoneme-api] socket_error word_id=${word.id} uri=$_assessUri');
-      return PhonemeAssessmentResult.failure(
+      return _retryOrFail(
+        attempt: attempt,
         word: word,
         recordingPath: recordingPath,
+        file: file,
+        requestStartedAt: requestStartedAt,
         error: 'Could not connect to the phoneme model at $baseUrl.',
       );
     } on FormatException {
@@ -179,6 +216,49 @@ class PhonemeAssessmentService {
         error: 'Phoneme model assessment failed: $error',
       );
     }
+  }
+
+  /// Retry with exponential backoff if attempts remain, or return failure.
+  Future<PhonemeAssessmentResult> _retryOrFail({
+    required int attempt,
+    required ScreeningWordModel word,
+    required String recordingPath,
+    required File file,
+    required DateTime requestStartedAt,
+    required String error,
+    String? rawBody,
+  }) async {
+    final nextAttempt = attempt + 1;
+    if (nextAttempt >= _maxRetries) {
+      debugPrint(
+        '[phoneme-api] retry_exhausted word_id=${word.id} '
+        'attempts=$nextAttempt/$_maxRetries error="$error"',
+      );
+      return PhonemeAssessmentResult.failure(
+        word: word,
+        recordingPath: recordingPath,
+        error: error,
+        rawBody: rawBody,
+      );
+    }
+
+    // Exponential backoff with jitter: baseDelay * 2^attempt + random(0..base)
+    final delay = _baseDelay * pow(2, attempt).toInt() +
+        Duration(milliseconds: Random().nextInt(_baseDelay.inMilliseconds));
+    debugPrint(
+      '[phoneme-api] retry_schedule word_id=${word.id} '
+      'attempt=${nextAttempt + 1}/$_maxRetries delay_ms=${delay.inMilliseconds} '
+      'error="$error"',
+    );
+    await Future<void>.delayed(delay);
+
+    return _withRetry(
+      attempt: nextAttempt,
+      word: word,
+      recordingPath: recordingPath,
+      file: file,
+      requestStartedAt: requestStartedAt,
+    );
   }
 
   /// Extract a descriptive error from the response body.

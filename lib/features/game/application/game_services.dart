@@ -1,6 +1,6 @@
 import '../../../models/screening_word_model.dart';
 import '../../../services/audio_recording_service.dart';
-import '../../../services/model_2_assessment_service.dart';
+import '../../../services/phoneme_assessment_service.dart';
 
 abstract class GameRecorder {
   Future<GameRecorderReadiness> prepare();
@@ -49,20 +49,20 @@ class AudioGameRecorder implements GameRecorder {
 }
 
 abstract class GameAssessmentClient {
-  Future<Model2AssessmentResult> assess({
+  Future<PhonemeAssessmentResult> assess({
     required ScreeningWordModel word,
     required String recordingPath,
   });
 }
 
 class Model2GameAssessmentClient implements GameAssessmentClient {
-  final Model2AssessmentService _service;
+  final PhonemeAssessmentService _service;
 
-  Model2GameAssessmentClient({Model2AssessmentService? service})
-    : _service = service ?? Model2AssessmentService();
+  Model2GameAssessmentClient({PhonemeAssessmentService? service})
+    : _service = service ?? PhonemeAssessmentService();
 
   @override
-  Future<Model2AssessmentResult> assess({
+  Future<PhonemeAssessmentResult> assess({
     required ScreeningWordModel word,
     required String recordingPath,
   }) {
