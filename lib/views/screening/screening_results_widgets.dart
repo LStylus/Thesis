@@ -90,7 +90,7 @@ class _LoadingContent extends StatelessWidget {
 }
 
 class _FigmaResultTile extends StatelessWidget {
-  final Model2AssessmentResult result;
+  final PhonemeAssessmentResult result;
   final bool isPlaying;
   final VoidCallback onPlay;
 

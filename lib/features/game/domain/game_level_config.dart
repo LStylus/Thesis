@@ -95,10 +95,7 @@ GameTarget _derivedTarget(
             id: '${source.id}_$suffix',
             audioId: source.audioId,
             displayWord: promptText.replaceAll('.', ''),
-            phonemeProcess: source.phonemeProcess,
-            position: source.position,
-            minAge: source.minAge,
-            maxAge: source.maxAge,
+            age: source.age,
           )
         : source,
   );

@@ -4,7 +4,7 @@ import 'package:thesis/features/game/application/game_session_controller.dart';
 import 'package:thesis/features/game/domain/game_level_config.dart';
 import 'package:thesis/gamescene/game_scene_state.dart';
 import 'package:thesis/models/screening_word_model.dart';
-import 'package:thesis/services/model_2_assessment_service.dart';
+import 'package:thesis/services/phoneme_assessment_service.dart';
 
 void main() {
   test(
@@ -252,20 +252,20 @@ class _FakeAssessmentClient implements GameAssessmentClient {
     : scores = scores ?? [];
 
   @override
-  Future<Model2AssessmentResult> assess({
+  Future<PhonemeAssessmentResult> assess({
     required ScreeningWordModel word,
     required String recordingPath,
   }) async {
     final call = callCount++;
     if (failFirst && call == 0) {
-      return Model2AssessmentResult.failure(
+      return PhonemeAssessmentResult.failure(
         word: word,
         recordingPath: recordingPath,
         error: 'Service unavailable',
       );
     }
     final score = call < scores.length ? scores[call] : 95;
-    return Model2AssessmentResult.success(
+    return PhonemeAssessmentResult.success(
       word: word,
       recordingPath: recordingPath,
       rawResponse: {

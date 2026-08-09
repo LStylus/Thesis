@@ -112,25 +112,8 @@ class AudioRecordingService {
       if (!await file.exists()) return null;
       final fileSize = await file.length();
 
-      if (fileSize <= 44) {
-        debugPrint(
-          '[audio-recording] stop_invalid path=$finalPath bytes=$fileSize '
-          'reason=too_small',
-        );
-        return null;
-      }
-      final hasWavHeader = await _hasWavHeader(file);
-      if (!hasWavHeader) {
-        debugPrint(
-          '[audio-recording] stop_invalid path=$finalPath bytes=$fileSize '
-          'reason=missing_wav_header',
-        );
-        return null;
-      }
-
       debugPrint(
-        '[audio-recording] stop_valid path=$finalPath bytes=$fileSize '
-        'wav_header=$hasWavHeader',
+        '[audio-recording] stop_valid path=$finalPath bytes=$fileSize',
       );
 
       return finalPath;
@@ -169,14 +152,4 @@ class AudioRecordingService {
     await _recorder.dispose();
   }
 
-  Future<bool> _hasWavHeader(File file) async {
-    final header = await file
-        .openRead(0, 12)
-        .fold<List<int>>(<int>[], (bytes, chunk) => bytes..addAll(chunk));
-    if (header.length < 12) return false;
-
-    final riff = String.fromCharCodes(header.sublist(0, 4));
-    final wave = String.fromCharCodes(header.sublist(8, 12));
-    return riff == 'RIFF' && wave == 'WAVE';
-  }
 }
