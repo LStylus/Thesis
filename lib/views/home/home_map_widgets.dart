@@ -1,16 +1,16 @@
 part of 'home_page.dart';
 
-class _OceanShell extends StatelessWidget {
+class _SkyIslandShell extends StatelessWidget {
   final Animation<double> animation;
   final Widget child;
 
-  const _OceanShell({required this.animation, required this.child});
+  const _SkyIslandShell({required this.animation, required this.child});
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        _ScrollableOceanMap(animation: animation),
+        _FloatingIslandMap(animation: animation),
         Positioned.fill(
           child: ColoredBox(
             color: Colors.black.withValues(alpha: 0.18),
@@ -22,14 +22,14 @@ class _OceanShell extends StatelessWidget {
   }
 }
 
-class _ScrollableOceanMap extends StatelessWidget {
+class _FloatingIslandMap extends StatelessWidget {
   final Animation<double> animation;
   final ScrollController? scrollController;
   final int unlockedIslandOneLevels;
   final Set<int> completedIslandOneLevels;
   final ValueChanged<int>? onStartGameplay;
 
-  const _ScrollableOceanMap({
+  const _FloatingIslandMap({
     required this.animation,
     this.scrollController,
     this.unlockedIslandOneLevels = 1,
@@ -41,11 +41,15 @@ class _ScrollableOceanMap extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        const sourceWidth = 2173.0;
-        const sourceHeight = 724.0;
+        const sourceWidth = 917.0;
+        const sourceHeight = 412.0;
         final viewportHeight = constraints.maxHeight;
-        final mapHeight = math.max(1.0, viewportHeight * 1.40);
-        final mapWidth = mapHeight * (sourceWidth / sourceHeight);
+        final scale = math.max(
+          constraints.maxWidth / sourceWidth,
+          viewportHeight / sourceHeight,
+        );
+        final mapWidth = sourceWidth * scale;
+        final mapHeight = sourceHeight * scale;
         final sx = mapWidth / sourceWidth;
         final sy = mapHeight / sourceHeight;
 
@@ -56,127 +60,112 @@ class _ScrollableOceanMap extends StatelessWidget {
           return levelIndex < unlockedIslandOneLevels;
         }
 
-        return SizedBox(
-          height: viewportHeight,
-          child: Align(
-            alignment: Alignment.center,
-            child: SingleChildScrollView(
-              controller: scrollController,
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: mapWidth,
-                height: viewportHeight,
-                child: Align(
-                  alignment: Alignment.center,
-                  child: SizedBox(
-                    width: mapWidth,
-                    height: mapHeight,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        Positioned.fill(
-                          child: Image.asset(
-                            'assets/backgrounds/ocean_map.png',
-                            fit: BoxFit.fill,
-                            filterQuality: FilterQuality.medium,
-                          ),
-                        ),
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            child: AnimatedBuilder(
-                              animation: animation,
-                              builder: (context, _) {
-                                return CustomPaint(
-                                  painter: _BubblesPainter(animation.value),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        _LessonMapNode(
-                          animation: animation,
-                          left: x(250),
-                          top: y(233),
-                          size: s(65),
-                          unlocked: isIslandOneUnlocked(0),
-                          locked: !isIslandOneUnlocked(0),
-                          completed: completedIslandOneLevels.contains(0),
-                          onTap: isIslandOneUnlocked(0)
-                              ? () => onStartGameplay?.call(0)
-                              : null,
-                        ),
-                        _LessonMapNode(
-                          animation: animation,
-                          left: x(380),
-                          top: y(163),
-                          size: s(65),
-                          unlocked: isIslandOneUnlocked(1),
-                          locked: !isIslandOneUnlocked(1),
-                          completed: completedIslandOneLevels.contains(1),
-                          onTap: isIslandOneUnlocked(1)
-                              ? () => onStartGameplay?.call(1)
-                              : null,
-                        ),
-                        _LessonMapNode(
-                          animation: animation,
-                          left: x(548),
-                          top: y(200),
-                          size: s(65),
-                          unlocked: isIslandOneUnlocked(2),
-                          locked: !isIslandOneUnlocked(2),
-                          completed: completedIslandOneLevels.contains(2),
-                          onTap: isIslandOneUnlocked(2)
-                              ? () => onStartGameplay?.call(2)
-                              : null,
-                        ),
-                        _LessonMapNode(
-                          animation: animation,
-                          left: x(767),
-                          top: y(215),
-                          size: s(65),
-                          kind: _LessonNodeKind.chest,
-                          unlocked: isIslandOneUnlocked(3),
-                          locked: !isIslandOneUnlocked(3),
-                          completed: completedIslandOneLevels.contains(3),
-                          onTap: isIslandOneUnlocked(3)
-                              ? () => onStartGameplay?.call(3)
-                              : null,
-                        ),
-                        _LessonMapNode(
-                          animation: animation,
-                          left: x(1323),
-                          top: y(237),
-                          size: s(65),
-                          locked: true,
-                        ),
-                        _LessonMapNode(
-                          animation: animation,
-                          left: x(1464),
-                          top: y(180),
-                          size: s(65),
-                          locked: true,
-                        ),
-                        _LessonMapNode(
-                          animation: animation,
-                          left: x(1618),
-                          top: y(231),
-                          size: s(65),
-                          locked: true,
-                        ),
-                        _LessonMapNode(
-                          animation: animation,
-                          left: x(1835),
-                          top: y(241),
-                          size: s(65),
-                          kind: _LessonNodeKind.chest,
-                          locked: true,
-                        ),
-                      ],
+        return ClipRect(
+          child: Stack(
+            children: [
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Color(0xFF7DDAED), Color(0xFF6CA5B9)],
                     ),
                   ),
                 ),
               ),
-            ),
+              Align(
+                alignment: Alignment.center,
+                child: SingleChildScrollView(
+                  controller: scrollController,
+                  scrollDirection: Axis.horizontal,
+                  child: SizedBox(
+                    width: mapWidth,
+                    height: viewportHeight,
+                    child: Align(
+                      alignment: Alignment.center,
+                      child: SizedBox(
+                        width: mapWidth,
+                        height: mapHeight,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(
+                              child: SvgPicture.asset(
+                                AppAssets.homeMapBackground,
+                                fit: BoxFit.fill,
+                              ),
+                            ),
+                            _LessonMapNode(
+                              animation: animation,
+                              label: 'Level 1',
+                              left: x(119),
+                              top: y(121),
+                              size: s(58),
+                              showFlag: true,
+                              unlocked: isIslandOneUnlocked(0),
+                              locked: !isIslandOneUnlocked(0),
+                              completed: completedIslandOneLevels.contains(0),
+                              onTap: isIslandOneUnlocked(0)
+                                  ? () => onStartGameplay?.call(0)
+                                  : null,
+                            ),
+                            _LessonMapNode(
+                              animation: animation,
+                              label: 'Level 2',
+                              left: x(203),
+                              top: y(119),
+                              size: s(58),
+                              unlocked: isIslandOneUnlocked(1),
+                              locked: !isIslandOneUnlocked(1),
+                              completed: completedIslandOneLevels.contains(1),
+                              onTap: isIslandOneUnlocked(1)
+                                  ? () => onStartGameplay?.call(1)
+                                  : null,
+                            ),
+                            _LessonMapNode(
+                              animation: animation,
+                              label: 'Level 3',
+                              left: x(270),
+                              top: y(119),
+                              size: s(58),
+                              unlocked: isIslandOneUnlocked(2),
+                              locked: !isIslandOneUnlocked(2),
+                              completed: completedIslandOneLevels.contains(2),
+                              onTap: isIslandOneUnlocked(2)
+                                  ? () => onStartGameplay?.call(2)
+                                  : null,
+                            ),
+                            _LessonMapNode(
+                              animation: animation,
+                              label: 'Level 4',
+                              left: x(484),
+                              top: y(116),
+                              size: s(58),
+                              unlocked: isIslandOneUnlocked(3),
+                              locked: !isIslandOneUnlocked(3),
+                              completed: completedIslandOneLevels.contains(3),
+                              onTap: isIslandOneUnlocked(3)
+                                  ? () => onStartGameplay?.call(3)
+                                  : null,
+                            ),
+                            _LessonMapNode(
+                              animation: animation,
+                              label: 'Activity 2 locked',
+                              left: x(672),
+                              top: y(218),
+                              size: s(58),
+                              locked: true,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fill(child: _PassingCloudLayer(animation: animation)),
+            ],
           ),
         );
       },
@@ -261,14 +250,13 @@ class _MapIconButton extends StatelessWidget {
   }
 }
 
-enum _LessonNodeKind { flag, chest }
-
 class _LessonMapNode extends StatelessWidget {
   final Animation<double> animation;
+  final String label;
   final double left;
   final double top;
   final double size;
-  final _LessonNodeKind kind;
+  final bool showFlag;
   final bool unlocked;
   final bool locked;
   final bool completed;
@@ -276,10 +264,11 @@ class _LessonMapNode extends StatelessWidget {
 
   const _LessonMapNode({
     required this.animation,
+    required this.label,
     required this.left,
     required this.top,
     required this.size,
-    this.kind = _LessonNodeKind.flag,
+    this.showFlag = false,
     this.unlocked = false,
     this.locked = false,
     this.completed = false,
@@ -288,14 +277,9 @@ class _LessonMapNode extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final assetPath = kind == _LessonNodeKind.chest
-        ? 'assets/props/treasure.svg'
-        : 'assets/props/flag.svg';
-    final visualSize = kind == _LessonNodeKind.chest ? size * 0.86 : size;
-
     return Positioned(
       left: left,
-      top: top - size * 0.12,
+      top: top,
       width: size,
       height: size,
       child: AnimatedBuilder(
@@ -310,43 +294,91 @@ class _LessonMapNode extends StatelessWidget {
             child: Transform.scale(scale: pulse, child: child),
           );
         },
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: locked ? null : onTap,
-            borderRadius: BorderRadius.circular(size * 0.18),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Opacity(
-                  opacity: locked ? 0.6 : 1,
-                  child: SvgPicture.asset(
-                    assetPath,
-                    width: visualSize,
-                    height: visualSize,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                if (completed)
-                  Positioned(
-                    right: size * 0.08,
-                    bottom: size * 0.1,
-                    child: Container(
-                      width: size * 0.28,
-                      height: size * 0.28,
+        child: Semantics(
+          label: label,
+          button: !locked,
+          enabled: !locked,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: locked ? null : onTap,
+              borderRadius: BorderRadius.circular(size / 2),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (unlocked && !locked)
+                    Container(
+                      width: size * 0.82,
+                      height: size * 0.82,
                       decoration: BoxDecoration(
-                        color: const Color(0xFF18A85A),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 2),
-                      ),
-                      child: Icon(
-                        Icons.check_rounded,
-                        color: Colors.white,
-                        size: size * 0.2,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.82),
+                          width: math.max(1.5, size * 0.035),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(
+                              0xFFEAF98E,
+                            ).withValues(alpha: 0.7),
+                            blurRadius: size * 0.22,
+                            spreadRadius: size * 0.03,
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-              ],
+                  if (showFlag)
+                    Transform.translate(
+                      offset: Offset(0, -size * 0.16),
+                      child: SvgPicture.asset(
+                        AppAssets.homeMapFlag,
+                        width: size * 0.76,
+                        height: size * 0.76,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  if (locked)
+                    Container(
+                      width: size * 0.58,
+                      height: size * 0.58,
+                      padding: EdgeInsets.all(size * 0.09),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.16),
+                            blurRadius: size * 0.12,
+                            offset: Offset(0, size * 0.05),
+                          ),
+                        ],
+                      ),
+                      child: SvgPicture.asset(
+                        'assets/props/lock.svg',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  if (completed)
+                    Positioned(
+                      right: size * 0.02,
+                      bottom: size * 0.04,
+                      child: Container(
+                        width: size * 0.3,
+                        height: size * 0.3,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF18A85A),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: Icon(
+                          Icons.check_rounded,
+                          color: Colors.white,
+                          size: size * 0.21,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
@@ -355,71 +387,109 @@ class _LessonMapNode extends StatelessWidget {
   }
 }
 
-class _BubblesPainter extends CustomPainter {
-  final double progress;
+class _PassingCloudLayer extends StatelessWidget {
+  final Animation<double> animation;
 
-  const _BubblesPainter(this.progress);
+  const _PassingCloudLayer({required this.animation});
 
-  static const List<_BubbleSpec> _bubbles = [
-    _BubbleSpec(x: 0.06, phase: 0.02, radius: 15, drift: 18, speed: 0.72),
-    _BubbleSpec(x: 0.16, phase: 0.28, radius: 9, drift: 10, speed: 0.86),
-    _BubbleSpec(x: 0.27, phase: 0.12, radius: 18, drift: 22, speed: 0.62),
-    _BubbleSpec(x: 0.38, phase: 0.48, radius: 11, drift: 16, speed: 0.78),
-    _BubbleSpec(x: 0.52, phase: 0.2, radius: 14, drift: 20, speed: 0.68),
-    _BubbleSpec(x: 0.63, phase: 0.7, radius: 8, drift: 12, speed: 0.92),
-    _BubbleSpec(x: 0.74, phase: 0.36, radius: 17, drift: 24, speed: 0.64),
-    _BubbleSpec(x: 0.86, phase: 0.58, radius: 10, drift: 16, speed: 0.84),
-    _BubbleSpec(x: 0.95, phase: 0.16, radius: 13, drift: 18, speed: 0.74),
+  static const List<_PassingCloudSpec> _clouds = [
+    _PassingCloudSpec(
+      phase: 0.02,
+      verticalPosition: 0.05,
+      width: 76,
+      opacity: 0.82,
+      cycles: 1,
+      bob: 4,
+    ),
+    _PassingCloudSpec(
+      phase: 0.38,
+      verticalPosition: 0.07,
+      width: 104,
+      opacity: 0.64,
+      cycles: 1,
+      bob: 7,
+    ),
+    _PassingCloudSpec(
+      phase: 0.14,
+      verticalPosition: 0.28,
+      width: 58,
+      opacity: 0.5,
+      cycles: 2,
+      bob: 3,
+    ),
+    _PassingCloudSpec(
+      phase: 0.72,
+      verticalPosition: 0.03,
+      width: 88,
+      opacity: 0.74,
+      cycles: 1,
+      bob: 5,
+    ),
   ];
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final stroke = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.2;
-    final fill = Paint()..style = PaintingStyle.fill;
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: RepaintBoundary(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return AnimatedBuilder(
+              animation: animation,
+              builder: (context, _) {
+                final scale = (constraints.maxHeight / 412).clamp(0.72, 1.5);
 
-    for (final bubble in _bubbles) {
-      final t = (progress * bubble.speed + bubble.phase) % 1.0;
-      final x =
-          size.width * bubble.x +
-          math.sin((t + bubble.phase) * math.pi * 2) * bubble.drift;
-      final y = size.height * (1.06 - t * 1.22);
-      final fade = math.sin(t * math.pi).clamp(0.0, 1.0);
-      final radius = bubble.radius * (0.8 + t * 0.45);
-
-      fill.color = Colors.white.withValues(alpha: 0.08 * fade);
-      stroke.color = Colors.white.withValues(alpha: 0.32 * fade);
-      canvas.drawCircle(Offset(x, y), radius, fill);
-      canvas.drawCircle(Offset(x, y), radius, stroke);
-
-      fill.color = Colors.white.withValues(alpha: 0.28 * fade);
-      canvas.drawCircle(
-        Offset(x - radius * 0.32, y - radius * 0.32),
-        math.max(2.4, radius * 0.16),
-        fill,
-      );
-    }
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    for (final cloud in _clouds)
+                      _buildCloud(cloud, constraints.biggest, scale.toDouble()),
+                  ],
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
   }
 
-  @override
-  bool shouldRepaint(covariant _BubblesPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+  Widget _buildCloud(_PassingCloudSpec cloud, Size viewport, double scale) {
+    final width = cloud.width * scale;
+    final height = width * (46 / 73);
+    final progress = (animation.value * cloud.cycles + cloud.phase) % 1.0;
+    final travelDistance = viewport.width + width * 2;
+    final left = viewport.width + width - (progress * travelDistance);
+    final top =
+        viewport.height * cloud.verticalPosition +
+        math.sin(progress * math.pi * 2) * cloud.bob;
+
+    return Positioned(
+      left: left,
+      top: top,
+      width: width,
+      height: height,
+      child: Opacity(
+        opacity: cloud.opacity,
+        child: SvgPicture.asset(AppAssets.passingCloud, fit: BoxFit.contain),
+      ),
+    );
   }
 }
 
-class _BubbleSpec {
-  final double x;
+class _PassingCloudSpec {
   final double phase;
-  final double radius;
-  final double drift;
-  final double speed;
+  final double verticalPosition;
+  final double width;
+  final double opacity;
+  final int cycles;
+  final double bob;
 
-  const _BubbleSpec({
-    required this.x,
+  const _PassingCloudSpec({
     required this.phase,
-    required this.radius,
-    required this.drift,
-    required this.speed,
+    required this.verticalPosition,
+    required this.width,
+    required this.opacity,
+    required this.cycles,
+    required this.bob,
   });
 }

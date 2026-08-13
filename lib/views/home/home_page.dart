@@ -7,6 +7,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 
 import '../../controllers/home_controller.dart';
+import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
 import '../../models/learning_report_model.dart';
@@ -51,7 +52,7 @@ class _HomePageState extends State<HomePage>
     });
     _motionController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 14),
+      duration: const Duration(seconds: 30),
     )..repeat();
     unawaited(_completeInitialLoading());
   }
@@ -110,7 +111,7 @@ class _HomePageState extends State<HomePage>
 
         if (profile == null) {
           return Scaffold(
-            body: _OceanShell(
+            body: _SkyIslandShell(
               animation: _motionController,
               child: const Center(child: _EmptyProfileMessage()),
             ),
@@ -118,24 +119,27 @@ class _HomePageState extends State<HomePage>
         }
 
         return Scaffold(
-          body: _OceanHomeView(profile: profile, animation: _motionController),
+          body: _SkyIslandHomeView(
+            profile: profile,
+            animation: _motionController,
+          ),
         );
       },
     );
   }
 }
 
-class _OceanHomeView extends StatefulWidget {
+class _SkyIslandHomeView extends StatefulWidget {
   final ProfileModel profile;
   final Animation<double> animation;
 
-  const _OceanHomeView({required this.profile, required this.animation});
+  const _SkyIslandHomeView({required this.profile, required this.animation});
 
   @override
-  State<_OceanHomeView> createState() => _OceanHomeViewState();
+  State<_SkyIslandHomeView> createState() => _SkyIslandHomeViewState();
 }
 
-class _OceanHomeViewState extends State<_OceanHomeView> {
+class _SkyIslandHomeViewState extends State<_SkyIslandHomeView> {
   static const int _islandOneTotalLevels = 4;
 
   late final ScrollController _scrollController;
@@ -184,7 +188,7 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
   }
 
   @override
-  void didUpdateWidget(covariant _OceanHomeView oldWidget) {
+  void didUpdateWidget(covariant _SkyIslandHomeView oldWidget) {
     super.didUpdateWidget(oldWidget);
 
     if (oldWidget.profile.profileId != widget.profile.profileId) {
@@ -342,7 +346,7 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
 
             return Stack(
               children: [
-                _ScrollableOceanMap(
+                _FloatingIslandMap(
                   animation: widget.animation,
                   scrollController: _scrollController,
                   unlockedIslandOneLevels: unlockedIslandOneLevels,
