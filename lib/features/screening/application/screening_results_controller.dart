@@ -6,7 +6,9 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../../../models/learning_module_model.dart';
 import '../../../models/screening_word_model.dart';
+import '../../../services/dynamic_modules_service.dart';
 import '../../../services/phoneme_assessment_service.dart';
 
 class ScreeningResultsController extends ChangeNotifier {
@@ -14,6 +16,7 @@ class ScreeningResultsController extends ChangeNotifier {
   final Map<String, String> recordingsByWordId;
   final Map<String, PhonemeAssessmentResult> assessmentResultsByWordId;
   final PhonemeAssessmentService _assessmentService;
+  final DynamicModulesService? _modulesService;
   final AudioPlayer _player;
   final List<PhonemeAssessmentResult> _results = [];
   final Set<String> _failedWordIds = {};
@@ -23,6 +26,7 @@ class ScreeningResultsController extends ChangeNotifier {
   String? _playingWordId;
   int _playbackSession = 0;
   bool _disposed = false;
+  LearningModuleModel? _learningModule;
 
   ScreeningResultsController({
     required this.words,
@@ -30,7 +34,9 @@ class ScreeningResultsController extends ChangeNotifier {
     required this.assessmentResultsByWordId,
     required PhonemeAssessmentService assessmentService,
     required AudioPlayer player,
+    DynamicModulesService? modulesService,
   }) : _assessmentService = assessmentService,
+       _modulesService = modulesService,
        _player = player;
 
   factory ScreeningResultsController.createDefault({
@@ -44,6 +50,7 @@ class ScreeningResultsController extends ChangeNotifier {
       assessmentResultsByWordId: assessmentResultsByWordId,
       assessmentService: PhonemeAssessmentService(),
       player: AudioPlayer(),
+      modulesService: DynamicModulesService(),
     );
   }
 
@@ -52,6 +59,11 @@ class ScreeningResultsController extends ChangeNotifier {
   int get processedCount => _processedCount;
   String? get playingWordId => _playingWordId;
   Set<String> get failedWordIds => Set.unmodifiable(_failedWordIds);
+
+  /// The personalized practice module built from the detected processes
+  /// (null until the module request completes — may stay null if the
+  /// module service is unreachable or no processes were detected).
+  LearningModuleModel? get learningModule => _learningModule;
 
   Future<void> start() async {
     debugPrint(
@@ -120,8 +132,46 @@ class ScreeningResultsController extends ChangeNotifier {
     );
     if (_disposed) return;
 
+    await _requestLearningModule();
+
     _isRunning = false;
     notifyListeners();
+  }
+
+  /// Builds the personalized practice module from the child's age and all
+  /// detected processes (dynamic modules service, port 8002).
+  Future<void> _requestLearningModule() async {
+    final modulesService = _modulesService;
+    if (modulesService == null || words.isEmpty) return;
+
+    final processes = _results
+        .expand((result) => result.detectedProcesses)
+        .map((process) => {
+              'process': process['process']?.toString() ?? '',
+              'position': process['position']?.toString() ?? '',
+              'detail': process['detail']?.toString() ?? '',
+            })
+        .toList();
+
+    if (processes.isEmpty) {
+      debugPrint('[modules-api] module_skipped no_detected_processes');
+      return;
+    }
+
+    try {
+      _learningModule = await modulesService.buildModule(
+        age: words.first.age,
+        processes: processes,
+      );
+      debugPrint(
+        '[modules-api] module_ready focus=${_learningModule?.focusSounds} '
+        'levels=${_learningModule?.levels.length}',
+      );
+    } on ModuleRequestException catch (error) {
+      debugPrint('[modules-api] module_error message=${error.message}');
+    } catch (error) {
+      debugPrint('[modules-api] module_error unexpected=$error');
+    }
   }
 
   Future<void> playRecording(PhonemeAssessmentResult result) async {

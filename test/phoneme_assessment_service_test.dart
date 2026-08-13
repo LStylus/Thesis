@@ -4,7 +4,7 @@ import 'package:thesis/models/screening_word_model.dart';
 
 /// Helper to create a minimal ScreeningWordModel for tests.
 ScreeningWordModel _word({
-  String id = 'pig_age4_initial',
+  String id = 'pig_age4',
   String displayWord = 'pig',
 }) {
   return ScreeningWordModel(
@@ -77,7 +77,7 @@ void main() {
         rawResponse: response,
       );
 
-      expect(result.wordId, 'pig_age4_initial');
+      expect(result.wordId, 'pig_age4');
       expect(result.displayWord, 'pig');
       expect(result.recordingPath, '/tmp/recording.wav');
       expect(result.overallScore, 66.67);
@@ -302,7 +302,7 @@ void main() {
       expect(json['pvc'], 100.0);
       expect(json['pcc_severity'], 'Mild');
       expect(json['passed'], true);
-      expect(json['word_id'], 'pig_age4_initial');
+      expect(json['word_id'], 'pig_age4');
       expect(json['display_word'], 'pig');
       expect(json['error'], null);
     });
