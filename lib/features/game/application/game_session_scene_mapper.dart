@@ -9,11 +9,11 @@ extension GameSessionSceneMapper on GameSessionController {
         : 0;
 
     return GameSceneState(
-      levelKind: config.kind,
+      template: config.template,
       phase: _state.phase,
       childName: config.childName,
       levelTitle: config.title,
-      speechText: _state.message ?? config.kind.instruction,
+      speechText: _state.message ?? config.template.instruction,
       targetText: target?.promptText ?? '',
       focusText: target?.focusText ?? '',
       targetAssetPath: target?.imageAssetPath,
@@ -23,11 +23,18 @@ extension GameSessionSceneMapper on GameSessionController {
       currentTarget: currentNumber,
       targetCount: _state.targets.length,
       micProgress: _state.recordProgress,
+      micLevel: _state.micLevel,
       countdown: _state.countdown,
       score: _state.lastAccuracy,
       completedTargetCount: _state.completedTargetIds.length,
       needsPractice:
           target != null && _state.needsPracticeTargetIds.contains(target.id),
+      targetPieces: target?.pieces ?? const [],
+      targetOptions: target?.options ?? const [],
+      correctOptionIndex: target?.correctOptionIndex ?? 0,
+      interactionRevision: _state.attemptCount,
+      difficulty: config.difficulty,
+      hintLevel: config.hintLevel,
     );
   }
 }

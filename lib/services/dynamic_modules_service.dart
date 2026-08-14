@@ -46,10 +46,7 @@ class DynamicModulesService {
       final response = await http
           .post(
             _moduleUri,
-            body: {
-              'age': age.toString(),
-              'processes': jsonEncode(processes),
-            },
+            body: {'age': age.toString(), 'processes': jsonEncode(processes)},
           )
           .timeout(const Duration(minutes: 1));
 

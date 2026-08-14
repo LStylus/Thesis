@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../../../gamescene/game_scene_state.dart';
 import '../../../services/phoneme_assessment_service.dart';
 import '../domain/game_level_config.dart';
-import '../domain/game_level_kind.dart';
+import '../domain/game_template_kind.dart';
 import '../domain/game_result.dart';
 import 'game_services.dart';
 import 'game_session_state.dart';
@@ -38,14 +38,12 @@ class GameSessionController extends ChangeNotifier {
 
   late GameSessionState _state;
   Timer? _recordingCountdownTimer;
+  StreamSubscription<double>? _amplitudeSubscription;
   int _operationToken = 0;
   bool _flowRunning = false;
   bool _levelCaptionShown = false;
   bool _paused = false;
   bool _disposed = false;
-
-  static const double passingScore = 80;
-  static const int maxRetriesPerTarget = 2;
 
   GameSessionController({
     required this.config,
@@ -55,6 +53,10 @@ class GameSessionController extends ChangeNotifier {
   }) : _recorder = recorder,
        _assessmentClient = assessmentClient {
     _state = GameSessionState.initial(config: config);
+    _amplitudeSubscription = _recorder.amplitudeLevels.listen(
+      _handleAmplitude,
+      onError: (_) {},
+    );
   }
 
   factory GameSessionController.createDefault(GameLevelConfig config) {
@@ -67,6 +69,9 @@ class GameSessionController extends ChangeNotifier {
 
   GameSessionState get state => _state;
 
+  int get _maxRetriesPerTarget =>
+      config.difficulty == GameDifficulty.supported ? 2 : 1;
+
   void start() {
     if (_disposed || _flowRunning) return;
     unawaited(_prepareAndStart());
@@ -75,6 +80,15 @@ class GameSessionController extends ChangeNotifier {
   void retryCurrent() {
     if (_disposed || _flowRunning || !_state.canRetry) return;
     unawaited(_prepareAndStart());
+  }
+
+  void completeInteraction() {
+    if (_disposed || _paused || _flowRunning) return;
+    if (_state.phase != GamePhase.interaction) return;
+
+    _flowRunning = true;
+    final token = ++_operationToken;
+    unawaited(_recordCurrentTarget(token));
   }
 
   void finishLevel() {
@@ -104,6 +118,7 @@ class GameSessionController extends ChangeNotifier {
           phase: GamePhase.instruction,
           countdown: timings.recordingDuration.inSeconds,
           recordProgress: 0,
+          micLevel: 0,
           message: 'Ready when you are.',
         ),
       );
@@ -127,6 +142,12 @@ class GameSessionController extends ChangeNotifier {
     if (_disposed) return;
     _state = state;
     notifyListeners();
+  }
+
+  void _handleAmplitude(double level) {
+    if (_disposed || _state.phase != GamePhase.recording) return;
+    final smoothed = (_state.micLevel * .62 + level * .38).clamp(0.0, 1.0);
+    _setState(_state.copyWith(micLevel: smoothed));
   }
 
   bool _isCurrent(int token) {
@@ -169,6 +190,7 @@ class GameSessionController extends ChangeNotifier {
     _disposed = true;
     _operationToken++;
     _recordingCountdownTimer?.cancel();
+    unawaited(_amplitudeSubscription?.cancel());
     completionResult.dispose();
     unawaited(_recorder.dispose());
     super.dispose();

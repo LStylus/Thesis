@@ -424,12 +424,21 @@ class _VoyageArtPanel extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        Image.asset(
-          'assets/game/bubble_bay/bubble_bay_background.png',
+        SvgPicture.asset(
+          'assets/game/adventure/game_sky_background.svg',
           fit: BoxFit.cover,
           alignment: const Alignment(0.08, 0),
         ),
-        const ColoredBox(color: Color(0x24004E68)),
+        Positioned(
+          left: dense ? -40 : -20,
+          right: dense ? -80 : -50,
+          bottom: dense ? -28 : -44,
+          child: SvgPicture.asset(
+            'assets/game/adventure/floating_school_island.svg',
+            fit: BoxFit.contain,
+          ),
+        ),
+        const ColoredBox(color: Color(0x12004E68)),
         SafeArea(
           right: false,
           child: Padding(
@@ -491,9 +500,9 @@ class _VoyageArtPanel extends StatelessWidget {
                     width: dense ? 138 : (compact ? 170 : 245),
                     height: dense ? 96 : (compact ? 122 : 176),
                     child: SvgPicture.asset(
-                      'assets/game/shared/whale_happy.svg',
+                      'assets/game/adventure/child_explorer_happy.svg',
                       fit: BoxFit.contain,
-                      semanticsLabel: 'Voice Voyage whale mascot',
+                      semanticsLabel: 'Voice Voyage child explorer',
                     ),
                   ),
                 ),

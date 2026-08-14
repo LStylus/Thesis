@@ -24,10 +24,10 @@ class PracticeItemModel {
   }
 
   Map<String, dynamic> toMap() => {
-        'text': text,
-        'target_sound': targetSound,
-        'position': position,
-      };
+    'text': text,
+    'target_sound': targetSound,
+    'position': position,
+  };
 }
 
 class ModuleLevelModel {
@@ -41,15 +41,18 @@ class ModuleLevelModel {
       level: map['level']?.toString() ?? '',
       items: (map['items'] as List? ?? const [])
           .whereType<Map>()
-          .map((item) => PracticeItemModel.fromMap(Map<String, dynamic>.from(item)))
+          .map(
+            (item) =>
+                PracticeItemModel.fromMap(Map<String, dynamic>.from(item)),
+          )
           .toList(),
     );
   }
 
   Map<String, dynamic> toMap() => {
-        'level': level,
-        'items': items.map((item) => item.toMap()).toList(),
-      };
+    'level': level,
+    'items': items.map((item) => item.toMap()).toList(),
+  };
 }
 
 class LearningModuleModel {
@@ -88,7 +91,10 @@ class LearningModuleModel {
       outlineTitle: map['outline_title']?.toString() ?? '',
       levels: (map['levels'] as List? ?? const [])
           .whereType<Map>()
-          .map((level) => ModuleLevelModel.fromMap(Map<String, dynamic>.from(level)))
+          .map(
+            (level) =>
+                ModuleLevelModel.fromMap(Map<String, dynamic>.from(level)),
+          )
           .toList(),
       rationale: map['rationale']?.toString() ?? '',
       generatedBy: map['generated_by']?.toString() ?? '',
@@ -101,20 +107,20 @@ class LearningModuleModel {
       levels.expand((level) => level.items).toList();
 
   /// Convenience: items of one level (e.g. 'word').
-  List<PracticeItemModel> itemsFor(String levelName) =>
-      levels.where((level) => level.level == levelName).expand(
-        (level) => level.items,
-      ).toList();
+  List<PracticeItemModel> itemsFor(String levelName) => levels
+      .where((level) => level.level == levelName)
+      .expand((level) => level.items)
+      .toList();
 
   Map<String, dynamic> toMap() => {
-        'module_id': moduleId,
-        'focus_sounds': focusSounds,
-        'focus_processes': focusProcesses,
-        'outline_id': outlineId,
-        'outline_title': outlineTitle,
-        'levels': levels.map((level) => level.toMap()).toList(),
-        'rationale': rationale,
-        'generated_by': generatedBy,
-        if (warning != null) 'warning': warning,
-      };
+    'module_id': moduleId,
+    'focus_sounds': focusSounds,
+    'focus_processes': focusProcesses,
+    'outline_id': outlineId,
+    'outline_title': outlineTitle,
+    'levels': levels.map((level) => level.toMap()).toList(),
+    'rationale': rationale,
+    'generated_by': generatedBy,
+    if (warning != null) 'warning': warning,
+  };
 }

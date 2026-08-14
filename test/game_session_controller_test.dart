@@ -7,67 +7,63 @@ import 'package:thesis/models/screening_word_model.dart';
 import 'package:thesis/services/phoneme_assessment_service.dart';
 
 void main() {
-  test(
-    'caption is shown before recording and duplicate starts are ignored',
-    () async {
-      final recorder = _FakeRecorder();
-      final controller = _controller(
-        recorder: recorder,
-        timings: const GameSessionTimings(
-          recordingDuration: Duration(milliseconds: 1),
-          levelCaptionDuration: Duration.zero,
-          targetCaptionDuration: Duration(milliseconds: 40),
-          feedbackHold: Duration.zero,
-          successHold: Duration.zero,
-        ),
-      );
+  test('recording starts only after the Flame interaction completes', () async {
+    final recorder = _FakeRecorder();
+    final controller = _controller(
+      recorder: recorder,
+      timings: const GameSessionTimings(
+        recordingDuration: Duration(milliseconds: 1),
+        levelCaptionDuration: Duration.zero,
+        targetCaptionDuration: Duration(milliseconds: 40),
+        feedbackHold: Duration.zero,
+        successHold: Duration.zero,
+      ),
+    );
 
-      controller.start();
-      controller.start();
-      await _waitUntil(
-        () => controller.state.message?.startsWith('Get ready:') ?? false,
-      );
+    controller.start();
+    controller.start();
+    await _waitUntil(() => controller.state.phase == GamePhase.interaction);
 
-      expect(controller.state.message, startsWith('Get ready:'));
-      expect(recorder.recordCalls, 0);
-      expect(recorder.prepareCalls, 1);
+    expect(recorder.recordCalls, 0);
+    expect(recorder.prepareCalls, 1);
+    controller.completeInteraction();
+    expect(controller.state.message, startsWith('Get ready:'));
 
-      await _waitUntil(() => recorder.recordCalls > 0);
-      await controller.cancel();
-      controller.dispose();
-    },
-  );
+    await _waitUntil(() => recorder.recordCalls > 0);
+    await controller.cancel();
+    controller.dispose();
+  });
 
-  test(
-    'correct assessments advance through every target and complete the level',
-    () async {
-      final controller = _controller();
-      controller.start();
+  test('correct assessments complete every personalized target', () async {
+    final controller = _controller();
+    controller.start();
+    await _driveToCompletion(controller);
 
-      await _waitUntil(() => controller.state.phase == GamePhase.completed);
+    final targetCount = controller.state.targets.length;
+    expect(controller.state.completedTargetIds, hasLength(targetCount));
+    expect(controller.state.targetAccuracies, hasLength(targetCount));
+    expect(controller.state.averageAccuracy(), 95);
+    expect(controller.completionResult.value, isNull);
 
-      expect(controller.state.completedTargetIds, hasLength(4));
-      expect(controller.state.targetAccuracies, hasLength(4));
-      expect(controller.state.averageAccuracy(), 95);
-      expect(controller.completionResult.value, isNull);
-
-      controller.finishLevel();
-      expect(controller.completionResult.value?.levelIndex, 0);
-      expect(controller.completionResult.value?.attemptedTargetCount, 4);
-      controller.dispose();
-    },
-  );
+    controller.finishLevel();
+    expect(controller.completionResult.value?.levelIndex, 0);
+    expect(
+      controller.completionResult.value?.attemptedTargetCount,
+      targetCount,
+    );
+    controller.dispose();
+  });
 
   test('retry result repeats only the current target', () async {
     final recorder = _FakeRecorder();
-    final assessment = _FakeAssessmentClient(scores: [45, 92, 95, 95, 95]);
+    final assessment = _FakeAssessmentClient(scores: [45, 92]);
     final controller = _controller(recorder: recorder, assessment: assessment);
+    final targetCount = controller.state.targets.length;
     controller.start();
+    await _driveToCompletion(controller);
 
-    await _waitUntil(() => controller.state.phase == GamePhase.completed);
-
-    expect(recorder.recordCalls, 5);
-    expect(controller.state.completedTargetIds, hasLength(4));
+    expect(recorder.recordCalls, targetCount + 1);
+    expect(controller.state.completedTargetIds, hasLength(targetCount));
     expect(controller.state.needsPracticeTargetIds, isEmpty);
     controller.dispose();
   });
@@ -75,32 +71,33 @@ void main() {
   test('invalid recording is not scored and can be retried', () async {
     final recorder = _FakeRecorder(recordingResults: [null]);
     final controller = _controller(recorder: recorder);
+    final targetCount = controller.state.targets.length;
     controller.start();
+    await _waitUntil(() => controller.state.phase == GamePhase.interaction);
+    controller.completeInteraction();
 
     await _waitUntil(() => controller.state.phase == GamePhase.invalidAudio);
     expect(controller.state.targetAccuracies, isEmpty);
     expect(controller.state.targetIndex, 0);
 
     controller.retryCurrent();
-    await _waitUntil(() => controller.state.phase == GamePhase.completed);
+    await _driveToCompletion(controller);
 
-    expect(recorder.recordCalls, 5);
-    expect(controller.state.targetAccuracies, hasLength(4));
+    expect(recorder.recordCalls, targetCount + 1);
+    expect(controller.state.targetAccuracies, hasLength(targetCount));
     controller.dispose();
   });
 
   test(
-    'bounded retries mark a target for practice and keep the child moving',
+    'bounded retries save a target for review and keep play moving',
     () async {
-      final assessment = _FakeAssessmentClient(
-        scores: [20, 30, 40, 95, 95, 95],
-      );
+      final assessment = _FakeAssessmentClient(scores: [20, 30, 40]);
       final controller = _controller(assessment: assessment);
+      final targetCount = controller.state.targets.length;
       controller.start();
+      await _driveToCompletion(controller);
 
-      await _waitUntil(() => controller.state.phase == GamePhase.completed);
-
-      expect(controller.state.completedTargetIds, hasLength(4));
+      expect(controller.state.completedTargetIds, hasLength(targetCount));
       expect(controller.state.needsPracticeTargetIds, hasLength(1));
       controller.finishLevel();
       expect(controller.completionResult.value?.needsPracticeCount, 1);
@@ -108,27 +105,26 @@ void main() {
     },
   );
 
-  test(
-    'microphone permission denial stops before prompt and recording',
-    () async {
-      final recorder = _FakeRecorder(
-        readiness: GameRecorderReadiness.permissionDenied,
-      );
-      final controller = _controller(recorder: recorder);
-      controller.start();
+  test('microphone permission denial stops before interaction', () async {
+    final recorder = _FakeRecorder(
+      readiness: GameRecorderReadiness.permissionDenied,
+    );
+    final controller = _controller(recorder: recorder);
+    controller.start();
 
-      await _waitUntil(() => controller.state.phase == GamePhase.error);
+    await _waitUntil(() => controller.state.phase == GamePhase.error);
 
-      expect(recorder.recordCalls, 0);
-      expect(controller.state.message, contains('Microphone permission'));
-      controller.dispose();
-    },
-  );
+    expect(recorder.recordCalls, 0);
+    expect(controller.state.message, contains('Microphone permission'));
+    controller.dispose();
+  });
 
-  test('assessment failure is never converted into a success', () async {
+  test('assessment failure is never converted into success', () async {
     final assessment = _FakeAssessmentClient(failFirst: true);
     final controller = _controller(assessment: assessment);
     controller.start();
+    await _waitUntil(() => controller.state.phase == GamePhase.interaction);
+    controller.completeInteraction();
 
     await _waitUntil(() => controller.state.phase == GamePhase.error);
 
@@ -137,33 +133,24 @@ void main() {
     controller.dispose();
   });
 
-  test(
-    'lifecycle pause cancels active work and resume restarts safely',
-    () async {
-      final recorder = _FakeRecorder();
-      final controller = _controller(
-        recorder: recorder,
-        timings: const GameSessionTimings(
-          recordingDuration: Duration(milliseconds: 1),
-          levelCaptionDuration: Duration.zero,
-          targetCaptionDuration: Duration(milliseconds: 40),
-          feedbackHold: Duration.zero,
-          successHold: Duration.zero,
-        ),
-      );
-      controller.start();
-      await _waitUntil(() => controller.state.phase == GamePhase.instruction);
+  test('pause cancels work and resume restores the interaction gate', () async {
+    final recorder = _FakeRecorder();
+    final controller = _controller(recorder: recorder);
+    controller.start();
+    await _waitUntil(() => controller.state.phase == GamePhase.interaction);
 
-      await controller.pause();
-      expect(recorder.cancelCalls, greaterThanOrEqualTo(1));
-      expect(recorder.recordCalls, 0);
+    await controller.pause();
+    expect(recorder.cancelCalls, greaterThanOrEqualTo(1));
+    expect(recorder.recordCalls, 0);
 
-      controller.resume();
-      await _waitUntil(() => controller.state.phase == GamePhase.completed);
-      expect(controller.state.completedTargetIds, hasLength(4));
-      controller.dispose();
-    },
-  );
+    controller.resume();
+    await _driveToCompletion(controller);
+    expect(
+      controller.state.completedTargetIds,
+      hasLength(controller.state.targets.length),
+    );
+    controller.dispose();
+  });
 }
 
 GameSessionController _controller({
@@ -172,7 +159,7 @@ GameSessionController _controller({
   GameSessionTimings? timings,
 }) {
   return GameSessionController(
-    config: const GameLevelConfig(
+    config: GameLevelConfig(
       childProfileId: 'child-1',
       childName: 'Kai',
       childAge: 6,
@@ -190,6 +177,23 @@ GameSessionController _controller({
           successHold: Duration.zero,
         ),
   );
+}
+
+Future<void> _driveToCompletion(GameSessionController controller) async {
+  final deadline = DateTime.now().add(const Duration(seconds: 3));
+  while (controller.state.phase != GamePhase.completed) {
+    if (DateTime.now().isAfter(deadline)) {
+      fail('Timed out while driving the game session.');
+    }
+    if (controller.state.phase == GamePhase.interaction) {
+      controller.completeInteraction();
+    }
+    if (controller.state.phase == GamePhase.error ||
+        controller.state.phase == GamePhase.invalidAudio) {
+      fail('Session stopped in ${controller.state.phase}.');
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 1));
+  }
 }
 
 Future<void> _waitUntil(bool Function() condition) async {
@@ -216,6 +220,9 @@ class _FakeRecorder implements GameRecorder {
     this.readiness = GameRecorderReadiness.ready,
   }) : events = events ?? [],
        recordingResults = recordingResults ?? [];
+
+  @override
+  Stream<double> get amplitudeLevels => const Stream.empty();
 
   @override
   Future<GameRecorderReadiness> prepare() async {

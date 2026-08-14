@@ -6,6 +6,9 @@ class GameTarget {
   final String focusText;
   final String? imageAssetPath;
   final ScreeningWordModel assessmentModel;
+  final List<String> pieces;
+  final List<String> options;
+  final int correctOptionIndex;
 
   const GameTarget({
     required this.id,
@@ -13,5 +16,8 @@ class GameTarget {
     required this.focusText,
     required this.assessmentModel,
     this.imageAssetPath,
+    this.pieces = const [],
+    this.options = const [],
+    this.correctOptionIndex = 0,
   });
 }

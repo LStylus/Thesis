@@ -1,8 +1,8 @@
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_fonts.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_fonts.dart';
 import '../game_scene_state.dart';
 
 class ProgressComponent extends PositionComponent {

@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'speech_profile_model.dart';
+
 class ProfileModel {
   final String profileId;
   final String userId;
@@ -13,6 +15,7 @@ class ProfileModel {
   final String relationshipToChild;
   final String childName;
   final String profileAssetPath;
+  final SpeechProfileModel? speechProfile;
 
   ProfileModel({
     required this.profileId,
@@ -26,6 +29,7 @@ class ProfileModel {
     required this.relationshipToChild,
     required this.childName,
     this.profileAssetPath = '',
+    this.speechProfile,
   });
 
   int get age => calculateAge(birthDate);
@@ -42,6 +46,7 @@ class ProfileModel {
     String? relationshipToChild,
     String? childName,
     String? profileAssetPath,
+    Object? speechProfile = _unset,
   }) {
     return ProfileModel(
       profileId: profileId ?? this.profileId,
@@ -55,6 +60,9 @@ class ProfileModel {
       relationshipToChild: relationshipToChild ?? this.relationshipToChild,
       childName: childName ?? this.childName,
       profileAssetPath: profileAssetPath ?? this.profileAssetPath,
+      speechProfile: identical(speechProfile, _unset)
+          ? this.speechProfile
+          : speechProfile as SpeechProfileModel?,
     );
   }
 
@@ -94,6 +102,7 @@ class ProfileModel {
       'childNameNormalized': childName.trim().toLowerCase(),
       'profileAssetPath': profileAssetPath,
       'profileComplete': true,
+      if (speechProfile != null) 'speechProfile': speechProfile!.toMap(),
     };
   }
 
@@ -114,6 +123,11 @@ class ProfileModel {
       relationshipToChild: _stringValue(map['relationshipToChild']),
       childName: _stringValue(map['childName']),
       profileAssetPath: _stringValue(map['profileAssetPath']),
+      speechProfile: map['speechProfile'] is Map
+          ? SpeechProfileModel.fromMap(
+              Map<String, dynamic>.from(map['speechProfile'] as Map),
+            )
+          : null,
     );
   }
 
@@ -131,3 +145,5 @@ class ProfileModel {
     return value.toString();
   }
 }
+
+const Object _unset = Object();

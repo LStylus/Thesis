@@ -27,6 +27,9 @@ class AudioRecordingService {
   bool get hasMicPermission => _hasMicPermission;
   bool get isRecorderReady => _isRecorderReady;
   bool get isRecording => _isRecording;
+  Stream<double> get amplitudeLevels => _recorder
+      .onAmplitudeChanged(const Duration(milliseconds: 80))
+      .map((amplitude) => ((amplitude.current + 55) / 50).clamp(0.0, 1.0));
 
   Future<bool> initialize() async {
     if (_hasMicPermission && _isRecorderReady) return true;
@@ -151,5 +154,4 @@ class AudioRecordingService {
     await cancel();
     await _recorder.dispose();
   }
-
 }

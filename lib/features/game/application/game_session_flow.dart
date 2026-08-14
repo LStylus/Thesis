@@ -25,7 +25,7 @@ extension GameSessionFlow on GameSessionController {
         _state.copyWith(
           phase: GamePhase.error,
           message: readiness == GameRecorderReadiness.permissionDenied
-              ? 'Microphone permission is needed before this voyage can begin.'
+              ? 'Microphone permission is needed before this game can begin.'
               : 'The microphone is not ready. Please try again.',
         ),
       );
@@ -38,7 +38,7 @@ extension GameSessionFlow on GameSessionController {
       _setState(
         _state.copyWith(
           phase: GamePhase.instruction,
-          message: config.kind.instruction,
+          message: config.template.instruction,
         ),
       );
       await Future<void>.delayed(timings.levelCaptionDuration);
@@ -48,10 +48,29 @@ extension GameSessionFlow on GameSessionController {
       }
     }
 
-    await _runCurrentTarget(token);
+    _presentCurrentTarget(token);
   }
 
-  Future<void> _runCurrentTarget(int token) async {
+  void _presentCurrentTarget(int token) {
+    if (!_isCurrent(token)) {
+      _releaseFlow(token);
+      return;
+    }
+    _setState(
+      _state.copyWith(
+        phase: GamePhase.interaction,
+        message: config.template.instruction,
+        lastAssessment: null,
+        lastAccuracy: null,
+        countdown: timings.recordingDuration.inSeconds,
+        recordProgress: 0,
+        micLevel: 0,
+      ),
+    );
+    _releaseFlow(token);
+  }
+
+  Future<void> _recordCurrentTarget(int token) async {
     if (!_isCurrent(token)) {
       _releaseFlow(token);
       return;
@@ -62,10 +81,9 @@ extension GameSessionFlow on GameSessionController {
       _state.copyWith(
         phase: GamePhase.instruction,
         message: 'Get ready: ${target.promptText}',
-        lastAssessment: null,
-        lastAccuracy: null,
         countdown: timings.recordingDuration.inSeconds,
         recordProgress: 0,
+        micLevel: 0,
       ),
     );
     await Future<void>.delayed(timings.targetCaptionDuration);
@@ -81,6 +99,7 @@ extension GameSessionFlow on GameSessionController {
         attemptCount: _state.attemptCount + 1,
         countdown: timings.recordingDuration.inSeconds,
         recordProgress: 0,
+        micLevel: 0,
       ),
     );
     _startRecordingCountdown(token);
@@ -99,7 +118,7 @@ extension GameSessionFlow on GameSessionController {
       _setState(
         _state.copyWith(
           phase: GamePhase.invalidAudio,
-          message: 'The waves were noisy. Let\'s try again.',
+          message: 'I could not hear that clearly. Let us try once more.',
           countdown: timings.recordingDuration.inSeconds,
           recordProgress: 0,
         ),
@@ -143,13 +162,13 @@ extension GameSessionFlow on GameSessionController {
     }
 
     final score = assessment.overallScore!.round().clamp(0, 100);
-    if (score >= GameSessionController.passingScore) {
+    if (score >= config.masteryThreshold) {
       await _completeCurrentTarget(token, score, assessment);
       return;
     }
 
     final retryCount = _state.retryCount + 1;
-    if (retryCount > GameSessionController.maxRetriesPerTarget) {
+    if (retryCount > _maxRetriesPerTarget) {
       final needsPractice = {..._state.needsPracticeTargetIds, target.id};
       _setState(_state.copyWith(needsPracticeTargetIds: needsPractice));
       await _completeCurrentTarget(token, score, assessment, assisted: true);
@@ -171,7 +190,7 @@ extension GameSessionFlow on GameSessionController {
       _releaseFlow(token);
       return;
     }
-    await _runCurrentTarget(token);
+    _presentCurrentTarget(token);
   }
 
   Future<void> _completeCurrentTarget(
@@ -192,8 +211,8 @@ extension GameSessionFlow on GameSessionController {
         lastAccuracy: score,
         lastAssessment: assessment,
         message: assisted
-            ? 'Nice effort. We will practice this one again later.'
-            : 'Great speaking!',
+            ? 'Good effort. This sound is saved for review.'
+            : 'Clear speaking!',
       ),
     );
     await Future<void>.delayed(timings.successHold);
@@ -222,17 +241,18 @@ extension GameSessionFlow on GameSessionController {
         retryCount: 0,
         lastAccuracy: null,
         lastAssessment: null,
-        message: 'Next stop!',
+        message: 'Next challenge!',
         countdown: timings.recordingDuration.inSeconds,
         recordProgress: 0,
       ),
     );
-    await _runCurrentTarget(token);
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    _presentCurrentTarget(token);
   }
 
   String _retryMessageForScore(int score) {
     return score < 50
-        ? 'Good try. Read the caption and say it again.'
-        : 'Almost there. Say the caption again.';
+        ? 'Good try. Watch the caption and make the sound slowly.'
+        : 'Almost there. Keep the sound clear from start to finish.';
   }
 }

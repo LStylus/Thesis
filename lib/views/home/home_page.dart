@@ -297,6 +297,7 @@ class _SkyIslandHomeViewState extends State<_SkyIslandHomeView> {
           childName: activeProfile.childName,
           childAge: activeProfile.age,
           levelIndex: levelIndex,
+          speechProfile: activeProfile.speechProfile,
         ),
       ),
     );

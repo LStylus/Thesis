@@ -83,7 +83,9 @@ class _ScreeningAccuracyResultsPageState
     });
 
     final authController = context.read<AuthController>();
-    final saved = await authController.completeSignup();
+    final saved = await authController.completeSignup(
+      speechProfile: _resultsController.buildSpeechProfile(),
+    );
     if (!mounted) return;
 
     if (!saved) {

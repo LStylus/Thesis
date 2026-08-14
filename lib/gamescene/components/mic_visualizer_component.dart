@@ -4,9 +4,9 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-import '../../../core/constants/app_assets.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_fonts.dart';
+import '../../core/constants/app_assets.dart';
+import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_fonts.dart';
 import '../game_scene.dart';
 import '../game_scene_state.dart';
 
@@ -28,9 +28,9 @@ class MicVisualizerComponent extends PositionComponent
   }
 
   void layoutFor(Vector2 gameSize) {
-    final visualSize = (gameSize.y * 0.20).clamp(88.0, 112.0).toDouble();
+    final visualSize = (gameSize.y * 0.20).clamp(72.0, 112.0).toDouble();
     size = Vector2.all(visualSize);
-    position = Vector2(gameSize.x * 0.5, gameSize.y - visualSize * 0.52 - 14);
+    position = Vector2(gameSize.x * 0.91, gameSize.y - visualSize * 0.52 - 14);
   }
 
   @override
@@ -48,6 +48,7 @@ class MicVisualizerComponent extends PositionComponent
     final checking = _state.phase == GamePhase.processing;
     final radius = size.x * 0.28;
     if (recording) {
+      final levelBoost = _state.micLevel * size.x * .08;
       final pulsePaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.8
@@ -55,7 +56,11 @@ class MicVisualizerComponent extends PositionComponent
       for (var i = 0; i < 3; i++) {
         final t = (_time * 1.8 + i / 3) % 1;
         pulsePaint.color = AppColors.primary.withValues(alpha: 0.34 * (1 - t));
-        canvas.drawCircle(center, radius + t * size.x * 0.30, pulsePaint);
+        canvas.drawCircle(
+          center,
+          radius + levelBoost + t * size.x * 0.30,
+          pulsePaint,
+        );
       }
     }
 
@@ -115,8 +120,8 @@ class MicVisualizerComponent extends PositionComponent
       );
       final destinationBounds = Rect.fromCenter(
         center: center,
-        width: radius * 2.08,
-        height: radius * 2.08,
+        width: radius * (2.08 + (recording ? _state.micLevel * .12 : 0)),
+        height: radius * (2.08 + (recording ? _state.micLevel * .12 : 0)),
       );
       final fitted = applyBoxFit(
         BoxFit.contain,
@@ -140,13 +145,33 @@ class MicVisualizerComponent extends PositionComponent
     }
 
     if (recording) {
+      final badgeCenter = Offset(
+        center.dx + radius * .72,
+        center.dy + radius * .72,
+      );
+      canvas.drawCircle(
+        badgeCenter,
+        12,
+        Paint()
+          ..color = Colors.white
+          ..isAntiAlias = true,
+      );
+      canvas.drawCircle(
+        badgeCenter,
+        12,
+        Paint()
+          ..color = AppColors.primary
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5
+          ..isAntiAlias = true,
+      );
       final countdown = TextPainter(
         text: TextSpan(
           text: '${_state.countdown}',
           style: const TextStyle(
             color: AppColors.primary,
             fontFamily: AppFonts.fredoka,
-            fontSize: 14,
+            fontSize: 15,
             fontWeight: FontWeight.w900,
             letterSpacing: 0,
           ),
@@ -155,7 +180,10 @@ class MicVisualizerComponent extends PositionComponent
       )..layout();
       countdown.paint(
         canvas,
-        Offset((size.x - countdown.width) / 2, size.y - countdown.height),
+        Offset(
+          badgeCenter.dx - countdown.width / 2,
+          badgeCenter.dy - countdown.height / 2,
+        ),
       );
     }
   }

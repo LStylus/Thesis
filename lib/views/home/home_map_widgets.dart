@@ -306,7 +306,7 @@ class _LessonMapNode extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  if (unlocked && !locked)
+                  if (unlocked && !locked && !showFlag)
                     Container(
                       width: size * 0.82,
                       height: size * 0.82,
@@ -338,25 +338,11 @@ class _LessonMapNode extends StatelessWidget {
                       ),
                     ),
                   if (locked)
-                    Container(
-                      width: size * 0.58,
-                      height: size * 0.58,
-                      padding: EdgeInsets.all(size * 0.09),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.16),
-                            blurRadius: size * 0.12,
-                            offset: Offset(0, size * 0.05),
-                          ),
-                        ],
-                      ),
-                      child: SvgPicture.asset(
-                        'assets/props/lock.svg',
-                        fit: BoxFit.contain,
-                      ),
+                    SvgPicture.asset(
+                      'assets/props/lock.svg',
+                      width: size * 0.72,
+                      height: size * 0.72,
+                      fit: BoxFit.contain,
                     ),
                   if (completed)
                     Positioned(
@@ -424,6 +410,22 @@ class _PassingCloudLayer extends StatelessWidget {
       opacity: 0.74,
       cycles: 1,
       bob: 5,
+    ),
+    _PassingCloudSpec(
+      phase: 0.56,
+      verticalPosition: 0.62,
+      width: 66,
+      opacity: 0.46,
+      cycles: 1,
+      bob: 4,
+    ),
+    _PassingCloudSpec(
+      phase: 0.84,
+      verticalPosition: 0.8,
+      width: 90,
+      opacity: 0.4,
+      cycles: 1,
+      bob: 6,
     ),
   ];
 
