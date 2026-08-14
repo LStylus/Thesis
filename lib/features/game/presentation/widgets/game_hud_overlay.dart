@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 
 import '../../../../gamescene/game_scene.dart';
 import '../../../../gamescene/game_scene_state.dart';
@@ -10,14 +9,12 @@ class GameHudOverlay extends StatelessWidget {
   final GameScene game;
   final GameSessionController controller;
   final VoidCallback onClose;
-  final VoidCallback onOpenGallery;
 
   const GameHudOverlay({
     super.key,
     required this.game,
     required this.controller,
     required this.onClose,
-    required this.onOpenGallery,
   });
 
   @override
@@ -40,16 +37,6 @@ class GameHudOverlay extends StatelessWidget {
                 onTap: onClose,
               ),
             ),
-            if (kDebugMode)
-              Positioned(
-                top: safePadding.top + 10,
-                left: 58,
-                child: _SquareIconButton(
-                  icon: Icons.grid_view_rounded,
-                  tooltip: 'Asset gallery',
-                  onTap: onOpenGallery,
-                ),
-              ),
             if (showPanel)
               Positioned.fill(
                 child: Center(
@@ -74,22 +61,17 @@ class GameHudOverlay extends StatelessWidget {
 
 class _SquareIconButton extends StatelessWidget {
   final IconData icon;
-  final String tooltip;
   final VoidCallback onTap;
 
-  const _SquareIconButton({
-    required this.icon,
-    required this.onTap,
-    this.tooltip = 'Close level',
-  });
+  const _SquareIconButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: tooltip,
+      label: 'Close level',
       button: true,
       child: IconButton.filled(
-        tooltip: tooltip,
+        tooltip: 'Close level',
         onPressed: onTap,
         icon: Icon(icon),
         style: IconButton.styleFrom(

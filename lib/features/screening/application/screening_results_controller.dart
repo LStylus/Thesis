@@ -8,6 +8,7 @@ import 'package:path_provider/path_provider.dart';
 
 import '../../../models/learning_module_model.dart';
 import '../../../models/screening_word_model.dart';
+import '../../../models/speech_profile_model.dart';
 import '../../../services/dynamic_modules_service.dart';
 import '../../../services/learning_module_store.dart';
 import '../../../services/phoneme_assessment_service.dart';
@@ -65,6 +66,60 @@ class ScreeningResultsController extends ChangeNotifier {
   /// (null until the module request completes — may stay null if the
   /// module service is unreachable or no processes were detected).
   LearningModuleModel? get learningModule => _learningModule;
+
+  SpeechProfileModel buildSpeechProfile() {
+    final validResults = _results.where((result) => result.isSuccess).toList();
+    final processCounts = <String, int>{};
+    final positionCounts = <String, int>{};
+
+    for (final result in validResults) {
+      for (final process in result.detectedProcesses) {
+        final name = process['process']?.toString().trim() ?? '';
+        final position = process['position']?.toString().trim() ?? '';
+        if (name.isNotEmpty) {
+          processCounts.update(name, (count) => count + 1, ifAbsent: () => 1);
+        }
+        if (position.isNotEmpty) {
+          positionCounts.update(
+            position,
+            (count) => count + 1,
+            ifAbsent: () => 1,
+          );
+        }
+      }
+    }
+
+    final rankedProcesses =
+        processCounts.entries.where((entry) => entry.value >= 2).toList()
+          ..sort((a, b) {
+            final byEvidence = b.value.compareTo(a.value);
+            return byEvidence != 0 ? byEvidence : a.key.compareTo(b.key);
+          });
+    final rankedPositions = positionCounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final moduleItems = _learningModule?.allItems ?? const [];
+    final approvedWords = <String>{
+      ...moduleItems.map((item) => item.text.trim().toUpperCase()),
+      ...validResults.map((result) => result.displayWord.trim().toUpperCase()),
+    }..removeWhere((word) => word.isEmpty);
+    final targetPhonemes = <String>{
+      ...?_learningModule?.focusSounds,
+      ...moduleItems.map((item) => item.targetSound.trim()),
+    }..removeWhere((sound) => sound.isEmpty);
+
+    return SpeechProfileModel(
+      primaryTarget: rankedProcesses.isEmpty ? '' : rankedProcesses.first.key,
+      secondaryTarget: rankedProcesses.length < 2 ? '' : rankedProcesses[1].key,
+      reviewTargets: rankedProcesses.skip(2).map((entry) => entry.key).toList(),
+      targetPhonemes: targetPhonemes.toList(growable: false),
+      wordPosition: rankedPositions.isEmpty ? '' : rankedPositions.first.key,
+      approvedWords: approvedWords.toList(growable: false),
+      averageAccuracy: _averageAccuracy,
+      validAttempts: validResults.length,
+      evidenceCounts: Map.fromEntries(rankedProcesses),
+    );
+  }
 
   Future<void> start() async {
     debugPrint(
@@ -147,11 +202,13 @@ class ScreeningResultsController extends ChangeNotifier {
 
     final processes = _results
         .expand((result) => result.detectedProcesses)
-        .map((process) => {
-              'process': process['process']?.toString() ?? '',
-              'position': process['position']?.toString() ?? '',
-              'detail': process['detail']?.toString() ?? '',
-            })
+        .map(
+          (process) => {
+            'process': process['process']?.toString() ?? '',
+            'position': process['position']?.toString() ?? '',
+            'detail': process['detail']?.toString() ?? '',
+          },
+        )
         .toList();
 
     if (processes.isEmpty) {

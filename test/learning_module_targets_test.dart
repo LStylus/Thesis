@@ -1,5 +1,4 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:thesis/features/game/domain/game_level_kind.dart';
 import 'package:thesis/features/game/domain/learning_module_targets.dart';
 import 'package:thesis/models/learning_module_model.dart';
 
@@ -16,7 +15,6 @@ LearningModuleModel _module() {
         PracticeItemModel(text: 'see', targetSound: '', position: ''),
         PracticeItemModel(text: 'so', targetSound: '', position: ''),
         PracticeItemModel(text: 'si', targetSound: '', position: ''),
-        PracticeItemModel(text: 'ke', targetSound: '', position: ''),
       ]),
       ModuleLevelModel(level: 'word', items: [
         PracticeItemModel(text: 'sea', targetSound: '', position: ''),
@@ -36,52 +34,34 @@ LearningModuleModel _module() {
 
 void main() {
   group('LearningModuleTargets', () {
-    test('maps module syllable items to Bubble Bay targets', () {
+    test('takes a slice of the module pool in level order', () {
       final targets = LearningModuleTargets.targetsFor(
         module: _module(),
-        kind: GameLevelKind.bubbleBay,
         childAge: 5,
+        count: 4,
       );
-      expect(targets, hasLength(4)); // capped at 4 (ke dropped)
+      expect(targets, hasLength(4));
+      expect(targets.map((t) => t.focusText).toList(),
+          ['sa', 'see', 'so', 'si']);
       expect(targets.first.promptText, 'SA');
-      expect(targets.first.focusText, 'sa');
       expect(targets.first.assessmentModel.displayWord, 'sa');
       expect(targets.first.assessmentModel.age, 5);
     });
 
-    test('maps module word items to Coral Cargo targets', () {
+    test('cycles the pool from a start index', () {
       final targets = LearningModuleTargets.targetsFor(
         module: _module(),
-        kind: GameLevelKind.coralCargo,
         childAge: 6,
+        count: 5,
+        startIndex: 4,
       );
-      expect(targets, hasLength(2));
-      expect(targets.first.promptText, 'SEA');
-      expect(targets.first.assessmentModel.displayWord, 'sea');
-      expect(targets.first.assessmentModel.age, 6);
-    });
-
-    test('maps module phrase items to Reef Route targets', () {
-      final targets = LearningModuleTargets.targetsFor(
-        module: _module(),
-        kind: GameLevelKind.reefRoute,
-        childAge: 5,
-      );
-      expect(targets, hasLength(1));
-      expect(targets.first.promptText, 'SEE THE SEA');
-      expect(targets.first.assessmentModel.displayWord, 'see the sea');
-    });
-
-    test('maps module sentence items to Captain\'s Call targets', () {
-      final targets = LearningModuleTargets.targetsFor(
-        module: _module(),
-        kind: GameLevelKind.captainsCall,
-        childAge: 5,
-      );
-      expect(targets, hasLength(1));
-      // sentence already ends with '.' — no double period
-      expect(targets.first.promptText, 'I see a sock.');
-      expect(targets.first.assessmentModel.displayWord, 'I see a sock.');
+      expect(targets, hasLength(5));
+      // pool: sa see so si | sea sun | see the sea | I see a sock.
+      expect(targets.map((t) => t.focusText).toList(),
+          ['sea', 'sun', 'see the sea', 'I see a sock.', 'sa']);
+      expect(targets[3].promptText, 'I see a sock.');
+      expect(targets[2].promptText, 'SEE THE SEA');
+      expect(targets[4].assessmentModel.age, 6);
     });
 
     test('appends a period only when the sentence lacks one', () {
@@ -101,8 +81,8 @@ void main() {
       );
       final targets = LearningModuleTargets.targetsFor(
         module: module,
-        kind: GameLevelKind.captainsCall,
         childAge: 5,
+        count: 1,
       );
       expect(targets.single.promptText, 'I see a sock.');
     });
@@ -110,11 +90,37 @@ void main() {
     test('every item is assessed as-is (no target-sound remapping)', () {
       final targets = LearningModuleTargets.targetsFor(
         module: _module(),
-        kind: GameLevelKind.coralCargo,
         childAge: 5,
+        count: 8,
       );
-      expect(targets.map((t) => t.assessmentModel.displayWord).toList(),
-          ['sea', 'sun']);
+      expect(
+        targets.map((t) => t.assessmentModel.displayWord).toList(),
+        [
+          'sa', 'see', 'so', 'si', 'sea', 'sun', 'see the sea',
+          'I see a sock.',
+        ],
+      );
+    });
+
+    test('returns empty for a module with no items', () {
+      final module = LearningModuleModel(
+        moduleId: 'm',
+        focusSounds: const [],
+        focusProcesses: const [],
+        outlineId: 'o',
+        outlineTitle: 't',
+        levels: const [],
+        rationale: '',
+        generatedBy: 'llm',
+      );
+      expect(
+        LearningModuleTargets.targetsFor(
+          module: module,
+          childAge: 5,
+          count: 5,
+        ),
+        isEmpty,
+      );
     });
   });
 }

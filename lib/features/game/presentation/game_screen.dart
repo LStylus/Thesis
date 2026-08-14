@@ -9,7 +9,7 @@ import '../../../gamescene/game_scene_state.dart';
 import '../application/game_session_controller.dart';
 import '../domain/game_level_config.dart';
 import '../domain/game_result.dart';
-import 'game_asset_gallery_screen.dart';
+import '../../../models/speech_profile_model.dart';
 import 'widgets/game_hud_overlay.dart';
 
 export '../domain/game_result.dart';
@@ -19,6 +19,7 @@ class GameScreen extends StatefulWidget {
   final String childName;
   final int childAge;
   final int levelIndex;
+  final SpeechProfileModel? speechProfile;
 
   const GameScreen({
     super.key,
@@ -26,6 +27,7 @@ class GameScreen extends StatefulWidget {
     required this.childName,
     required this.childAge,
     required this.levelIndex,
+    this.speechProfile,
   });
 
   @override
@@ -52,13 +54,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       childName: widget.childName,
       childAge: widget.childAge,
       levelIndex: widget.levelIndex,
+      speechProfile: widget.speechProfile,
     );
     _controller = GameSessionController.createDefault(config);
     _game = GameScene(
       initialState: GameSceneState.initial(
         childName: widget.childName,
-        levelKind: config.kind,
+        template: config.template,
       ),
+      onInteractionCompleted: _controller.completeInteraction,
     );
     _gameWidget = GameWidget<GameScene>(
       game: _game,
@@ -68,7 +72,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           game: game,
           controller: _controller,
           onClose: _closeGameplay,
-          onOpenGallery: _openAssetGallery,
         ),
       },
     );
@@ -119,15 +122,6 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
     _hasNavigated = true;
     Navigator.of(context).pop();
-  }
-
-  Future<void> _openAssetGallery() async {
-    await _controller.pause();
-    if (!mounted) return;
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute(builder: (_) => const GameAssetGalleryScreen()),
-    );
-    if (mounted) _controller.resume();
   }
 
   @override

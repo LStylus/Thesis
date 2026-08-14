@@ -48,12 +48,8 @@ flutter:
     - assets/icons/
     - assets/profiles/
     - assets/props/
-    - assets/game/shared/
+    - assets/game/adventure/
     - assets/game/words/
-    - assets/game/bubble_bay/
-    - assets/game/coral_cargo/
-    - assets/game/reef_route/
-    - assets/game/captains_call/
 
   fonts:
     - family: Matemasie

@@ -44,6 +44,7 @@ class NoopPromptAudio implements PromptAudioPlayer {
 }
 
 abstract class GameRecorder {
+  Stream<double> get amplitudeLevels;
   Future<GameRecorderReadiness> prepare();
   Future<String?> recordTimed({
     required String fileNamePrefix,
@@ -61,6 +62,9 @@ class AudioGameRecorder implements GameRecorder {
 
   AudioGameRecorder({AudioRecordingService? service})
     : _service = service ?? AudioRecordingService();
+
+  @override
+  Stream<double> get amplitudeLevels => _service.amplitudeLevels;
 
   @override
   Future<GameRecorderReadiness> prepare() async {

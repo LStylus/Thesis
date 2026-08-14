@@ -1,65 +1,54 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 import '../../../models/screening_word_model.dart';
-import 'game_level_kind.dart';
 import 'game_target.dart';
 
 /// Loads the fallback game targets from `assets/data/game_targets.csv`.
 ///
-/// The CSV records every target across the four levels with its paired
-/// image/audio assets — this is the dev-bypass / fallback source used
-/// when no learning module exists yet.  Level *structure* comes from
-/// `GameLevelConfig`; the target *content* comes from here (or from the
-/// learning module when available).
+/// The CSV records every target across the four module levels (syllable,
+/// word, phrase, sentence — in order) with its paired image/audio assets.
+/// This is the fallback source used when no learning module exists.
 class GameTargetCatalog {
   static const String csvAsset = 'assets/data/game_targets.csv';
   static const int fallbackAge = 4;
 
-  static Future<Map<String, List<GameTarget>>>? _cache;
+  static Future<List<GameTarget>>? _cache;
 
-  static Future<List<GameTarget>> targetsFor(GameLevelKind kind) async {
-    final level = _levelColumnFor(kind);
-    return (await _byLevel())[level] ?? const [];
-  }
+  static Future<List<GameTarget>> targets() => _cache ??= _readCsv();
 
-  static Future<Map<String, List<GameTarget>>> _byLevel() =>
-      _cache ??= _readCsv();
+  static Future<List<GameTarget>> _readCsv() async {
+    try {
+      final raw = await rootBundle.loadString(csvAsset);
+      final rows = _parseCsv(raw);
+      final targets = <GameTarget>[];
 
-  static String _levelColumnFor(GameLevelKind kind) => switch (kind) {
-        GameLevelKind.bubbleBay => 'bubble_bay',
-        GameLevelKind.coralCargo => 'coral_cargo',
-        GameLevelKind.reefRoute => 'reef_route',
-        GameLevelKind.captainsCall => 'captains_call',
-      };
+      for (final row in rows) {
+        if (row.isEmpty || row.first == 'level') continue; // skip header
+        final id = row[1];
+        final promptText = row[2];
+        final apiWord = row[3];
+        final sourceWord = row.length > 8 ? row[8] : apiWord;
 
-  static Future<Map<String, List<GameTarget>>> _readCsv() async {
-    final raw = await rootBundle.loadString(csvAsset);
-    final rows = _parseCsv(raw);
-    final byLevel = <String, List<GameTarget>>{};
-
-    for (final row in rows) {
-      if (row.isEmpty || row.first == 'level') continue; // skip header
-      final level = row[0];
-      final id = row[1];
-      final promptText = row[2];
-      final apiWord = row[3];
-      final sourceWord = row.length > 8 ? row[8] : apiWord;
-
-      byLevel.putIfAbsent(level, () => []).add(GameTarget(
+        targets.add(GameTarget(
+          id: id,
+          promptText: promptText,
+          focusText: apiWord,
+          imageAssetPath: _nullable(row, 6),
+          audioAssetPath: _nullable(row, 7),
+          assessmentModel: ScreeningWordModel(
             id: id,
-            promptText: promptText,
-            focusText: apiWord,
-            imageAssetPath: _nullable(row, 6),
-            audioAssetPath: _nullable(row, 7),
-            assessmentModel: ScreeningWordModel(
-              id: id,
-              audioId: sourceWord,
-              displayWord: apiWord,
-              age: fallbackAge,
-            ),
-          ));
+            audioId: sourceWord,
+            displayWord: apiWord,
+            age: fallbackAge,
+          ),
+        ));
+      }
+      return targets;
+    } catch (error) {
+      debugPrint('[game-catalog] load_failed error=$error');
+      return const [];
     }
-    return byLevel;
   }
 
   static String? _nullable(List<String> row, int index) {

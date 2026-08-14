@@ -243,7 +243,8 @@ class PhonemeAssessmentService {
     }
 
     // Exponential backoff with jitter: baseDelay * 2^attempt + random(0..base)
-    final delay = _baseDelay * pow(2, attempt).toInt() +
+    final delay =
+        _baseDelay * pow(2, attempt).toInt() +
         Duration(milliseconds: Random().nextInt(_baseDelay.inMilliseconds));
     debugPrint(
       '[phoneme-api] retry_schedule word_id=${word.id} '
@@ -273,13 +274,15 @@ class PhonemeAssessmentService {
     if (decoded['detail'] != null) {
       final detail = decoded['detail'];
       if (detail is List && detail.isNotEmpty) {
-        return detail.map((d) {
-          final msg = d['msg']?.toString() ?? '';
-          final loc = d['loc'] is List
-              ? (d['loc'] as List).skip(1).join('.')
-              : '';
-          return '$msg${loc.isNotEmpty ? ' ($loc)' : ''}';
-        }).join('; ');
+        return detail
+            .map((d) {
+              final msg = d['msg']?.toString() ?? '';
+              final loc = d['loc'] is List
+                  ? (d['loc'] as List).skip(1).join('.')
+                  : '';
+              return '$msg${loc.isNotEmpty ? ' ($loc)' : ''}';
+            })
+            .join('; ');
       }
       return detail.toString();
     }
@@ -309,7 +312,8 @@ class PhonemeAssessmentService {
   }
 
   String _errorMessageFromResponse(Map<String, dynamic> decoded) {
-    final error = decoded['error']?.toString() ?? 'Phoneme model returned an error.';
+    final error =
+        decoded['error']?.toString() ?? 'Phoneme model returned an error.';
     final details = decoded['details'];
 
     if (details is List && details.isNotEmpty) {

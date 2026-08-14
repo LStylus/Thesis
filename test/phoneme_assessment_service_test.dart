@@ -3,10 +3,7 @@ import 'package:thesis/services/phoneme_assessment_service.dart';
 import 'package:thesis/models/screening_word_model.dart';
 
 /// Helper to create a minimal ScreeningWordModel for tests.
-ScreeningWordModel _word({
-  String id = 'pig_age4',
-  String displayWord = 'pig',
-}) {
+ScreeningWordModel _word({String id = 'pig_age4', String displayWord = 'pig'}) {
   return ScreeningWordModel(
     id: id,
     audioId: displayWord,
@@ -65,10 +62,7 @@ void main() {
             },
           ],
         },
-        'quality': {
-          'warnings': [],
-          'rms_value': 0.05,
-        },
+        'quality': {'warnings': [], 'rms_value': 0.05},
       };
 
       final result = PhonemeAssessmentResult.success(
@@ -93,10 +87,7 @@ void main() {
     });
 
     test('parses passed=false correctly', () {
-      final response = {
-        'overall_score': 50.0,
-        'passed': false,
-      };
+      final response = {'overall_score': 50.0, 'passed': false};
 
       final result = PhonemeAssessmentResult.success(
         word: _word(),
@@ -109,9 +100,7 @@ void main() {
     });
 
     test('handles null passed field gracefully', () {
-      final response = {
-        'overall_score': 90.0,
-      };
+      final response = {'overall_score': 90.0};
 
       final result = PhonemeAssessmentResult.success(
         word: _word(),
@@ -124,9 +113,7 @@ void main() {
     });
 
     test('handles missing optional score fields', () {
-      final response = {
-        'overall_score': 80.0,
-      };
+      final response = {'overall_score': 80.0};
 
       final result = PhonemeAssessmentResult.success(
         word: _word(),
@@ -165,9 +152,7 @@ void main() {
     test('detectedProcesses returns empty list for no processes', () {
       final response = {
         'overall_score': 100.0,
-        'assessment': {
-          'detected_processes': [],
-        },
+        'assessment': {'detected_processes': []},
       };
 
       final result = PhonemeAssessmentResult.success(
@@ -180,9 +165,7 @@ void main() {
     });
 
     test('detectedProcesses returns empty list if assessment is null', () {
-      final response = {
-        'overall_score': 100.0,
-      };
+      final response = {'overall_score': 100.0};
 
       final result = PhonemeAssessmentResult.success(
         word: _word(),
@@ -198,7 +181,11 @@ void main() {
         'overall_score': 66.67,
         'assessment': {
           'detected_processes': [
-            {'process': 'stopping', 'position': 'initial', 'detail': '/p/ → /b/'},
+            {
+              'process': 'stopping',
+              'position': 'initial',
+              'detail': '/p/ → /b/',
+            },
           ],
         },
       };
@@ -215,9 +202,7 @@ void main() {
     });
 
     test('detectedProcessSummary returns "No detected process" when empty', () {
-      final response = {
-        'overall_score': 100.0,
-      };
+      final response = {'overall_score': 100.0};
 
       final result = PhonemeAssessmentResult.success(
         word: _word(),
@@ -244,7 +229,10 @@ void main() {
     });
 
     test('includes rawResponse when provided', () {
-      final rawResponse = {'error': 'Invalid Audio', 'details': ['too quiet']};
+      final rawResponse = {
+        'error': 'Invalid Audio',
+        'details': ['too quiet'],
+      };
 
       final result = PhonemeAssessmentResult.failure(
         word: _word(),

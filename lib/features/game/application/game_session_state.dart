@@ -13,6 +13,7 @@ class GameSessionState {
   final int attemptCount;
   final int countdown;
   final double recordProgress;
+  final double micLevel;
   final int? lastAccuracy;
   final PhonemeAssessmentResult? lastAssessment;
   final String? message;
@@ -30,6 +31,7 @@ class GameSessionState {
     this.attemptCount = 0,
     this.countdown = 0,
     this.recordProgress = 0,
+    this.micLevel = 0,
     this.lastAccuracy,
     this.lastAssessment,
     this.message,
@@ -83,6 +85,7 @@ class GameSessionState {
     int? attemptCount,
     int? countdown,
     double? recordProgress,
+    double? micLevel,
     Object? lastAccuracy = _unset,
     Object? lastAssessment = _unset,
     Object? message = _unset,
@@ -100,6 +103,7 @@ class GameSessionState {
       attemptCount: attemptCount ?? this.attemptCount,
       countdown: countdown ?? this.countdown,
       recordProgress: recordProgress ?? this.recordProgress,
+      micLevel: micLevel ?? this.micLevel,
       lastAccuracy: identical(lastAccuracy, _unset)
           ? this.lastAccuracy
           : lastAccuracy as int?,

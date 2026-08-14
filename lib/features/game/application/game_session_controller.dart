@@ -3,11 +3,12 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../gamescene/game_scene_state.dart';
+import '../../../models/learning_module_model.dart';
 import '../../../services/dynamic_modules_service.dart';
 import '../../../services/learning_module_store.dart';
 import '../../../services/phoneme_assessment_service.dart';
 import '../domain/game_level_config.dart';
-import '../domain/game_level_kind.dart';
+import '../domain/game_template_kind.dart';
 import '../domain/game_result.dart';
 import '../domain/game_target.dart';
 import '../domain/learning_module_targets.dart';
@@ -45,14 +46,12 @@ class GameSessionController extends ChangeNotifier {
 
   late GameSessionState _state;
   Timer? _recordingCountdownTimer;
+  StreamSubscription<double>? _amplitudeSubscription;
   int _operationToken = 0;
   bool _flowRunning = false;
   bool _levelCaptionShown = false;
   bool _paused = false;
   bool _disposed = false;
-
-  static const double passingScore = 80;
-  static const int maxRetriesPerTarget = 2;
 
   GameSessionController({
     required this.config,
@@ -68,6 +67,10 @@ class GameSessionController extends ChangeNotifier {
        _modulesService = modulesService ?? DynamicModulesService(),
        _promptAudio = promptAudio ?? AudioPlayersPromptAudio() {
     _state = GameSessionState.initial(config: config);
+    _amplitudeSubscription = _recorder.amplitudeLevels.listen(
+      _handleAmplitude,
+      onError: (_) {},
+    );
   }
 
   factory GameSessionController.createDefault(GameLevelConfig config) {
@@ -82,17 +85,11 @@ class GameSessionController extends ChangeNotifier {
 
   /// Targets for the current level: the persisted learning module when
   /// available; otherwise (re)try fetching one with the last screening
-  /// findings; otherwise the CSV fallback catalog.
+  /// findings; otherwise the config's CSV-catalog / engine fallback.
   Future<List<GameTarget>> resolveTargets() async {
     final stored = await _moduleStore.load();
-    if (stored.module != null) {
-      final targets = LearningModuleTargets.targetsFor(
-        module: stored.module!,
-        kind: config.kind,
-        childAge: config.childAge,
-      );
-      if (targets.isNotEmpty) return targets;
-    }
+    final storedTargets = await _targetsFromModule(stored.module);
+    if (storedTargets.isNotEmpty) return storedTargets;
 
     if (stored.hasInputs) {
       try {
@@ -101,18 +98,26 @@ class GameSessionController extends ChangeNotifier {
           processes: stored.processes,
         );
         await _moduleStore.save(module);
-        final targets = LearningModuleTargets.targetsFor(
-          module: module,
-          kind: config.kind,
-          childAge: config.childAge,
-        );
-        if (targets.isNotEmpty) return targets;
+        final refetchedTargets = await _targetsFromModule(module);
+        if (refetchedTargets.isNotEmpty) return refetchedTargets;
       } catch (error) {
         debugPrint('[game] module_refetch_failed error=$error');
       }
     }
 
     return config.buildTargets();
+  }
+
+  Future<List<GameTarget>> _targetsFromModule(
+    LearningModuleModel? module,
+  ) async {
+    if (module == null) return const [];
+    return LearningModuleTargets.targetsFor(
+      module: module,
+      childAge: config.childAge,
+      count: config.repetitions,
+      startIndex: config.levelIndex * config.repetitions,
+    );
   }
 
   Future<void> _playPromptAudio(GameTarget target) async {
@@ -125,6 +130,9 @@ class GameSessionController extends ChangeNotifier {
     }
   }
 
+  int get _maxRetriesPerTarget =>
+      config.difficulty == GameDifficulty.supported ? 2 : 1;
+
   void start() {
     if (_disposed || _flowRunning) return;
     unawaited(_prepareAndStart());
@@ -133,6 +141,15 @@ class GameSessionController extends ChangeNotifier {
   void retryCurrent() {
     if (_disposed || _flowRunning || !_state.canRetry) return;
     unawaited(_prepareAndStart());
+  }
+
+  void completeInteraction() {
+    if (_disposed || _paused || _flowRunning) return;
+    if (_state.phase != GamePhase.interaction) return;
+
+    _flowRunning = true;
+    final token = ++_operationToken;
+    unawaited(_recordCurrentTarget(token));
   }
 
   void finishLevel() {
@@ -162,6 +179,7 @@ class GameSessionController extends ChangeNotifier {
           phase: GamePhase.instruction,
           countdown: timings.recordingDuration.inSeconds,
           recordProgress: 0,
+          micLevel: 0,
           message: 'Ready when you are.',
         ),
       );
@@ -185,6 +203,12 @@ class GameSessionController extends ChangeNotifier {
     if (_disposed) return;
     _state = state;
     notifyListeners();
+  }
+
+  void _handleAmplitude(double level) {
+    if (_disposed || _state.phase != GamePhase.recording) return;
+    final smoothed = (_state.micLevel * .62 + level * .38).clamp(0.0, 1.0);
+    _setState(_state.copyWith(micLevel: smoothed));
   }
 
   bool _isCurrent(int token) {
@@ -228,6 +252,7 @@ class GameSessionController extends ChangeNotifier {
     _operationToken++;
     _recordingCountdownTimer?.cancel();
     _promptAudio.dispose();
+    unawaited(_amplitudeSubscription?.cancel());
     completionResult.dispose();
     unawaited(_recorder.dispose());
     super.dispose();

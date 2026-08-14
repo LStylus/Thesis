@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../models/app_user_model.dart';
 import '../models/profile_model.dart';
+import '../models/speech_profile_model.dart';
 import '../models/signup_draft_model.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -165,7 +166,7 @@ class AuthController extends ChangeNotifier {
     }
   }
 
-  Future<bool> completeSignup() async {
+  Future<bool> completeSignup({SpeechProfileModel? speechProfile}) async {
     errorMessage = null;
     _setLoading(true);
 
@@ -192,6 +193,7 @@ class AuthController extends ChangeNotifier {
         parentName: _draft.parentName,
         relationshipToChild: _draft.relationshipToChild,
         childName: _draft.childName,
+        speechProfile: speechProfile,
       );
 
       await _userService.createUserAndProfile(user: appUser, profile: profile);

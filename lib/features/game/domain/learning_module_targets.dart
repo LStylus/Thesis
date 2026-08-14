@@ -1,47 +1,44 @@
 import '../../../models/learning_module_model.dart';
 import '../../../models/screening_word_model.dart';
-import 'game_level_kind.dart';
 import 'game_target.dart';
 
 /// Builds dynamic gameplay targets from a learning module.
 ///
-/// The module's four levels map directly onto the game's four levels:
-/// syllable → Bubble Bay, word → Coral Cargo, phrase → Reef Route,
-/// sentence → Captain's Call.  Every item is its own target and is
-/// assessed as-is — the phoneme service reports whichever phonemes were
-/// wrong, not just a single "target sound" (all module items are in the
-/// curated word list, so they are all assessable).
+/// The module's items (syllables → words → phrases → sentences, in level
+/// order) form the target pool for the template-based game.  Each game
+/// level takes a rotating slice of the pool (offset by the level index)
+/// so every item eventually gets practiced.  Every item is its own target
+/// and is assessed as-is — the phoneme service reports whichever phonemes
+/// were wrong, not just a single "target sound" (all module items are in
+/// the curated word list, so they are all assessable).
 class LearningModuleTargets {
-  static const int _maxTargetsPerLevel = 4;
-
   static List<GameTarget> targetsFor({
     required LearningModuleModel module,
-    required GameLevelKind kind,
     required int childAge,
+    int count = 5,
+    int startIndex = 0,
   }) {
-    final levelName = switch (kind) {
-      GameLevelKind.bubbleBay => 'syllable',
-      GameLevelKind.coralCargo => 'word',
-      GameLevelKind.reefRoute => 'phrase',
-      GameLevelKind.captainsCall => 'sentence',
-    };
+    final entries = <({String level, PracticeItemModel item})>[
+      for (final level in module.levels)
+        for (final item in level.items) (level: level.level, item: item),
+    ];
+    if (entries.isEmpty) return const [];
 
-    final items = module.itemsFor(levelName).take(_maxTargetsPerLevel).toList();
-
-    return items.map((item) {
-      final assessedWord = item.text.trim();
+    return List.generate(count, (index) {
+      final entry = entries[(startIndex + index) % entries.length];
+      final assessedWord = entry.item.text.trim();
       return GameTarget(
-        id: 'module_${levelName}_$assessedWord',
-        promptText: _promptFor(levelName, item.text),
-        focusText: item.text,
+        id: 'module_${entry.level}_${startIndex + index}_$assessedWord',
+        promptText: _promptFor(entry.level, entry.item.text),
+        focusText: assessedWord,
         assessmentModel: ScreeningWordModel(
-          id: 'module_${levelName}_$assessedWord',
+          id: 'module_${entry.level}_${startIndex + index}_$assessedWord',
           audioId: assessedWord,
           displayWord: assessedWord,
           age: childAge,
         ),
       );
-    }).toList();
+    });
   }
 
   static String _promptFor(String levelName, String text) {

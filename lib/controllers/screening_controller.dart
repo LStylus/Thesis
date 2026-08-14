@@ -16,7 +16,8 @@ class ScreeningController extends ChangeNotifier {
 
   final AudioPlayer _player = AudioPlayer();
   final AudioRecordingService _recordingService = AudioRecordingService();
-  final PhonemeAssessmentService _assessmentService = PhonemeAssessmentService();
+  final PhonemeAssessmentService _assessmentService =
+      PhonemeAssessmentService();
 
   late final List<ScreeningWordModel> _words;
   final Map<String, String> _recordingsByWordId = {};

@@ -7,6 +7,9 @@ class GameTarget {
   final String? imageAssetPath;
   final String? audioAssetPath;
   final ScreeningWordModel assessmentModel;
+  final List<String> pieces;
+  final List<String> options;
+  final int correctOptionIndex;
 
   const GameTarget({
     required this.id,
@@ -15,5 +18,8 @@ class GameTarget {
     required this.assessmentModel,
     this.imageAssetPath,
     this.audioAssetPath,
+    this.pieces = const [],
+    this.options = const [],
+    this.correctOptionIndex = 0,
   });
 }
