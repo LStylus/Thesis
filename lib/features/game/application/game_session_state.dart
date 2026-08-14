@@ -46,7 +46,7 @@ class GameSessionState {
       phase: GamePhase.loading,
       childName: config.childName,
       levelTitle: config.title,
-      targets: config.buildTargets(),
+      targets: const [], // loaded asynchronously by the controller
       targetIndex: 0,
       countdown: GameSessionControllerDefaults.recordingSeconds,
     );

@@ -406,6 +406,13 @@ class PhonemeAssessmentResult {
 
   bool get isSuccess => error == null && overallScore != null;
 
+  /// True when the server rejected the recording for poor audio quality
+  /// (too quiet, no speech detected) — the child must record again before
+  /// the screener may advance past this word.
+  bool get isInvalidAudio =>
+      (error?.startsWith('Invalid Audio') ?? false) ||
+      rawResponse?['error'] == 'Invalid Audio';
+
   List<Map<String, dynamic>> get detectedProcesses {
     final rawProcesses = assessment?['detected_processes'];
     if (rawProcesses is! List) return const [];

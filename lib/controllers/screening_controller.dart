@@ -233,6 +233,13 @@ class ScreeningController extends ChangeNotifier {
             'word=${result.displayWord} word_id=${result.wordId} '
             'message=${result.error}',
           );
+          if (result.isInvalidAudio) {
+            // Recording failed the server's quality checks — the word must
+            // be said again (clearer, louder), it cannot count as done.
+            errorMessage =
+                'That recording was too quiet — please try again and say '
+                'the word closer to the microphone.';
+          }
         }
 
         isProcessing = false;
@@ -360,6 +367,15 @@ class ScreeningController extends ChangeNotifier {
 
     if (!hasRecording) {
       errorMessage = 'Please record the word first.';
+      notifyListeners();
+      return false;
+    }
+
+    final result = _assessmentResultsByWordId[currentWord.id];
+    if (result != null && result.isInvalidAudio) {
+      errorMessage =
+          'That recording was too quiet — please record this word again '
+          'before moving on.';
       notifyListeners();
       return false;
     }

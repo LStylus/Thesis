@@ -10,6 +10,7 @@ import '../../models/screening_word_model.dart';
 import '../../services/phoneme_assessment_service.dart';
 import '../../widgets/credentials_auth_scaffold.dart';
 import '../../widgets/glow_asset_button.dart';
+import '../../widgets/practice_module_section.dart';
 import '../../widgets/primary_button.dart';
 import '../auth/auth_gate.dart';
 
@@ -138,6 +139,12 @@ class _ScreeningAccuracyResultsPageState
                 onPlay: () => _resultsController.playRecording(result),
               ),
             ),
+          if (_resultsController.learningModule != null) ...[
+            const SizedBox(height: 6),
+            PracticeModuleSection(
+              module: _resultsController.learningModule!,
+            ),
+          ],
           if (_profileSaveError != null) ...[
             const SizedBox(height: 10),
             CredentialsErrorBanner(message: _profileSaveError!),

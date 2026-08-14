@@ -3,10 +3,14 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../../../gamescene/game_scene_state.dart';
+import '../../../services/dynamic_modules_service.dart';
+import '../../../services/learning_module_store.dart';
 import '../../../services/phoneme_assessment_service.dart';
 import '../domain/game_level_config.dart';
 import '../domain/game_level_kind.dart';
 import '../domain/game_result.dart';
+import '../domain/game_target.dart';
+import '../domain/learning_module_targets.dart';
 import 'game_services.dart';
 import 'game_session_state.dart';
 
@@ -35,6 +39,9 @@ class GameSessionController extends ChangeNotifier {
   final GameAssessmentClient _assessmentClient;
   final GameSessionTimings timings;
   final ValueNotifier<GameResult?> completionResult = ValueNotifier(null);
+  final LearningModuleStore _moduleStore;
+  final DynamicModulesService? _modulesService;
+  final PromptAudioPlayer _promptAudio;
 
   late GameSessionState _state;
   Timer? _recordingCountdownTimer;
@@ -52,8 +59,14 @@ class GameSessionController extends ChangeNotifier {
     required GameRecorder recorder,
     required GameAssessmentClient assessmentClient,
     this.timings = const GameSessionTimings(),
+    LearningModuleStore? moduleStore,
+    DynamicModulesService? modulesService,
+    PromptAudioPlayer? promptAudio,
   }) : _recorder = recorder,
-       _assessmentClient = assessmentClient {
+       _assessmentClient = assessmentClient,
+       _moduleStore = moduleStore ?? LearningModuleStore(),
+       _modulesService = modulesService ?? DynamicModulesService(),
+       _promptAudio = promptAudio ?? AudioPlayersPromptAudio() {
     _state = GameSessionState.initial(config: config);
   }
 
@@ -66,6 +79,51 @@ class GameSessionController extends ChangeNotifier {
   }
 
   GameSessionState get state => _state;
+
+  /// Targets for the current level: the persisted learning module when
+  /// available; otherwise (re)try fetching one with the last screening
+  /// findings; otherwise the CSV fallback catalog.
+  Future<List<GameTarget>> resolveTargets() async {
+    final stored = await _moduleStore.load();
+    if (stored.module != null) {
+      final targets = LearningModuleTargets.targetsFor(
+        module: stored.module!,
+        kind: config.kind,
+        childAge: config.childAge,
+      );
+      if (targets.isNotEmpty) return targets;
+    }
+
+    if (stored.hasInputs) {
+      try {
+        final module = await _modulesService!.buildModule(
+          age: stored.age!,
+          processes: stored.processes,
+        );
+        await _moduleStore.save(module);
+        final targets = LearningModuleTargets.targetsFor(
+          module: module,
+          kind: config.kind,
+          childAge: config.childAge,
+        );
+        if (targets.isNotEmpty) return targets;
+      } catch (error) {
+        debugPrint('[game] module_refetch_failed error=$error');
+      }
+    }
+
+    return config.buildTargets();
+  }
+
+  Future<void> _playPromptAudio(GameTarget target) async {
+    final path = target.audioAssetPath;
+    if (path == null) return;
+    try {
+      await _promptAudio.playAsset(path);
+    } catch (error) {
+      debugPrint('[game] prompt_audio_error target=${target.id} error=$error');
+    }
+  }
 
   void start() {
     if (_disposed || _flowRunning) return;
@@ -169,6 +227,7 @@ class GameSessionController extends ChangeNotifier {
     _disposed = true;
     _operationToken++;
     _recordingCountdownTimer?.cancel();
+    _promptAudio.dispose();
     completionResult.dispose();
     unawaited(_recorder.dispose());
     super.dispose();

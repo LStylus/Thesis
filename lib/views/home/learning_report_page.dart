@@ -116,23 +116,8 @@ class _LearningReportPageState extends State<LearningReportPage> {
                                   child: _ReportCard(
                                     title: 'Overall Progress',
                                     minContentHeight: 122,
-                                    child: Column(
-                                      children: [
-                                        const SizedBox(height: 7),
-                                        const Text(
-                                          'So far, your child has learned',
-                                          textAlign: TextAlign.center,
-                                          style: TextStyle(
-                                            color: Color(0xFFC9C9C9),
-                                            fontFamily: AppFonts.fredokaOne,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w400,
-                                            letterSpacing: 0,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 12),
-                                        _MetricsGrid(metrics: widget.overall),
-                                      ],
+                                    child: _MetricsGrid(
+                                      metrics: widget.overall,
                                     ),
                                   ),
                                 ),

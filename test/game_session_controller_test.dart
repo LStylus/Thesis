@@ -7,6 +7,8 @@ import 'package:thesis/models/screening_word_model.dart';
 import 'package:thesis/services/phoneme_assessment_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test(
     'caption is shown before recording and duplicate starts are ignored',
     () async {
@@ -180,6 +182,7 @@ GameSessionController _controller({
     ),
     recorder: recorder ?? _FakeRecorder(),
     assessmentClient: assessment ?? _FakeAssessmentClient(),
+    promptAudio: NoopPromptAudio(),
     timings:
         timings ??
         const GameSessionTimings(

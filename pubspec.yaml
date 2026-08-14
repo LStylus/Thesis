@@ -40,6 +40,8 @@ flutter:
 
   assets:
     - assets/audio/screening/
+    - assets/audio/main_audio/
+    - assets/data/
     - assets/backgrounds/
     - assets/characters/
     - assets/fonts/

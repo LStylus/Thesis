@@ -5,6 +5,7 @@ class GameTarget {
   final String promptText;
   final String focusText;
   final String? imageAssetPath;
+  final String? audioAssetPath;
   final ScreeningWordModel assessmentModel;
 
   const GameTarget({
@@ -13,5 +14,6 @@ class GameTarget {
     required this.focusText,
     required this.assessmentModel,
     this.imageAssetPath,
+    this.audioAssetPath,
   });
 }

@@ -2,7 +2,7 @@ part of 'game_session_controller.dart';
 
 extension GameSessionFlow on GameSessionController {
   Future<void> _prepareAndStart() async {
-    if (_disposed || _paused || _flowRunning || _state.targets.isEmpty) return;
+    if (_disposed || _paused || _flowRunning) return;
 
     _flowRunning = true;
     final token = ++_operationToken;
@@ -14,6 +14,32 @@ extension GameSessionFlow on GameSessionController {
         lastAccuracy: null,
       ),
     );
+
+    // Load targets (learning module when available, CSV fallback otherwise)
+    if (_state.targets.isEmpty) {
+      List<GameTarget> targets;
+      try {
+        targets = await resolveTargets();
+      } catch (error) {
+        debugPrint('[game] target_load_error error=$error');
+        targets = const [];
+      }
+      if (!_isCurrent(token)) {
+        _releaseFlow(token);
+        return;
+      }
+      _state = _state.copyWith(targets: targets);
+      if (targets.isEmpty) {
+        _setState(
+          _state.copyWith(
+            phase: GamePhase.error,
+            message: 'No practice words are available for this level.',
+          ),
+        );
+        _releaseFlow(token);
+        return;
+      }
+    }
 
     final readiness = await _recorder.prepare();
     if (!_isCurrent(token)) {
@@ -68,6 +94,7 @@ extension GameSessionFlow on GameSessionController {
         recordProgress: 0,
       ),
     );
+    unawaited(_playPromptAudio(target));
     await Future<void>.delayed(timings.targetCaptionDuration);
     if (!_isCurrent(token)) {
       _releaseFlow(token);

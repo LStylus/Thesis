@@ -15,6 +15,7 @@ import '../../features/game/presentation/game_screen.dart';
 import '../../services/audio_recording_service.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/voyage_loading_screen.dart';
+import 'child_profile_page.dart';
 import 'learning_report_page.dart';
 import 'user_select_page.dart';
 
@@ -267,6 +268,14 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
     return math.min(_islandOneTotalLevels, highestCompletedLevel + 2);
   }
 
+  Future<void> _openChildProfile(ProfileModel profile) async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (_) => ChildProfilePage(profile: profile),
+      ),
+    );
+  }
+
   Future<void> _openLearningReport(LearningReportData reportData) async {
     final activeProfile = _activeProfile;
     final reportMetrics = _reportMetricsFor(reportData);
@@ -388,10 +397,10 @@ class _OceanHomeViewState extends State<_OceanHomeView> {
                   bottom: padding.bottom + 24,
                   child: _MapIconButton(
                     assetPath: 'assets/icons/learning_report_button.svg',
-                    label: 'Learning report',
+                    label: 'Profile',
                     width: 50,
                     height: 50,
-                    onTap: () => _openLearningReport(reportData),
+                    onTap: () => _openChildProfile(activeProfile),
                   ),
                 ),
                 Positioned(

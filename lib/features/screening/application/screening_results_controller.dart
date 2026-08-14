@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../../../models/learning_module_model.dart';
 import '../../../models/screening_word_model.dart';
 import '../../../services/dynamic_modules_service.dart';
+import '../../../services/learning_module_store.dart';
 import '../../../services/phoneme_assessment_service.dart';
 
 class ScreeningResultsController extends ChangeNotifier {
@@ -158,6 +159,13 @@ class ScreeningResultsController extends ChangeNotifier {
       return;
     }
 
+    // Persist the request inputs first — gameplay can RETRY the fetch
+    // when the module service is unavailable right now.
+    await LearningModuleStore().saveFindings(
+      age: words.first.age,
+      processes: processes,
+    );
+
     try {
       _learningModule = await modulesService.buildModule(
         age: words.first.age,
@@ -167,6 +175,9 @@ class ScreeningResultsController extends ChangeNotifier {
         '[modules-api] module_ready focus=${_learningModule?.focusSounds} '
         'levels=${_learningModule?.levels.length}',
       );
+      if (_learningModule != null) {
+        await LearningModuleStore().save(_learningModule!);
+      }
     } on ModuleRequestException catch (error) {
       debugPrint('[modules-api] module_error message=${error.message}');
     } catch (error) {

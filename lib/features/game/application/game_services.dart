@@ -1,6 +1,47 @@
+import 'package:audioplayers/audioplayers.dart';
+
 import '../../../models/screening_word_model.dart';
 import '../../../services/audio_recording_service.dart';
 import '../../../services/phoneme_assessment_service.dart';
+
+/// Plays the target prompt audio before recording (may be silent when the
+/// target has no audio asset).  Abstract so tests can inject a no-op.
+abstract class PromptAudioPlayer {
+  Future<void> playAsset(String assetPath);
+  void dispose();
+}
+
+class AudioPlayersPromptAudio implements PromptAudioPlayer {
+  final AudioPlayer _player;
+
+  AudioPlayersPromptAudio({AudioPlayer? player})
+    : _player = player ?? AudioPlayer();
+
+  @override
+  Future<void> playAsset(String assetPath) async {
+    try {
+      await _player.stop();
+      await _player.play(AssetSource(assetPath));
+    } catch (_) {
+      // audio is a nicety — never break the game flow
+    }
+  }
+
+  @override
+  void dispose() {
+    try {
+      _player.dispose();
+    } catch (_) {}
+  }
+}
+
+class NoopPromptAudio implements PromptAudioPlayer {
+  @override
+  Future<void> playAsset(String assetPath) async {}
+
+  @override
+  void dispose() {}
+}
 
 abstract class GameRecorder {
   Future<GameRecorderReadiness> prepare();
