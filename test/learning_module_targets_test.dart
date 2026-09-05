@@ -10,22 +10,38 @@ LearningModuleModel _module() {
     outlineId: 'stopping-s',
     outlineTitle: 'Stopping: /s/ practice',
     levels: const [
-      ModuleLevelModel(level: 'syllable', items: [
-        PracticeItemModel(text: 'sa', targetSound: '', position: ''),
-        PracticeItemModel(text: 'see', targetSound: '', position: ''),
-        PracticeItemModel(text: 'so', targetSound: '', position: ''),
-        PracticeItemModel(text: 'si', targetSound: '', position: ''),
-      ]),
-      ModuleLevelModel(level: 'word', items: [
-        PracticeItemModel(text: 'sea', targetSound: '', position: ''),
-        PracticeItemModel(text: 'sun', targetSound: '', position: ''),
-      ]),
-      ModuleLevelModel(level: 'phrase', items: [
-        PracticeItemModel(text: 'see the sea', targetSound: '', position: ''),
-      ]),
-      ModuleLevelModel(level: 'sentence', items: [
-        PracticeItemModel(text: 'I see a sock.', targetSound: '', position: ''),
-      ]),
+      ModuleLevelModel(
+        level: 'syllable',
+        items: [
+          PracticeItemModel(text: 'sa', targetSound: '', position: ''),
+          PracticeItemModel(text: 'see', targetSound: '', position: ''),
+          PracticeItemModel(text: 'so', targetSound: '', position: ''),
+          PracticeItemModel(text: 'si', targetSound: '', position: ''),
+        ],
+      ),
+      ModuleLevelModel(
+        level: 'word',
+        items: [
+          PracticeItemModel(text: 'sea', targetSound: 's', position: 'initial'),
+          PracticeItemModel(text: 'sun', targetSound: '', position: ''),
+        ],
+      ),
+      ModuleLevelModel(
+        level: 'phrase',
+        items: [
+          PracticeItemModel(text: 'see the sea', targetSound: '', position: ''),
+        ],
+      ),
+      ModuleLevelModel(
+        level: 'sentence',
+        items: [
+          PracticeItemModel(
+            text: 'I see a sock.',
+            targetSound: '',
+            position: '',
+          ),
+        ],
+      ),
     ],
     rationale: 'test',
     generatedBy: 'llm',
@@ -34,35 +50,47 @@ LearningModuleModel _module() {
 
 void main() {
   group('LearningModuleTargets', () {
-    test('takes a slice of the module pool in level order', () {
-      final targets = LearningModuleTargets.targetsFor(
-        module: _module(),
-        childAge: 5,
-        count: 4,
-      );
-      expect(targets, hasLength(4));
-      expect(targets.map((t) => t.focusText).toList(),
-          ['sa', 'see', 'so', 'si']);
-      expect(targets.first.promptText, 'SA');
-      expect(targets.first.assessmentModel.displayWord, 'sa');
-      expect(targets.first.assessmentModel.age, 5);
-    });
+    test(
+      'preserves the complete module in source order without repetition',
+      () {
+        final targets = LearningModuleTargets.targetsFor(
+          module: _module(),
+          childAge: 5,
+        );
+        expect(targets, hasLength(8));
+        expect(targets.map((t) => t.focusText).toList(), [
+          'sa',
+          'see',
+          'so',
+          'si',
+          'sea',
+          'sun',
+          'see the sea',
+          'I see a sock.',
+        ]);
+        expect(targets.first.promptText, 'SA');
+        expect(targets.first.assessmentModel.displayWord, 'sa');
+        expect(targets.first.assessmentModel.age, 5);
+      },
+    );
 
-    test('cycles the pool from a start index', () {
-      final targets = LearningModuleTargets.targetsFor(
-        module: _module(),
-        childAge: 6,
-        count: 5,
-        startIndex: 4,
-      );
-      expect(targets, hasLength(5));
-      // pool: sa see so si | sea sun | see the sea | I see a sock.
-      expect(targets.map((t) => t.focusText).toList(),
-          ['sea', 'sun', 'see the sea', 'I see a sock.', 'sa']);
-      expect(targets[3].promptText, 'I see a sock.');
-      expect(targets[2].promptText, 'SEE THE SEA');
-      expect(targets[4].assessmentModel.age, 6);
-    });
+    test(
+      'keeps personalization metadata without assigning learning stages',
+      () {
+        final targets = LearningModuleTargets.targetsFor(
+          module: _module(),
+          childAge: 6,
+        );
+        expect(targets[4].targetSound, 's');
+        expect(targets[4].soundPosition, 'initial');
+        expect(targets[4].contentUnit, 'word');
+        expect(targets[7].promptText, 'I see a sock.');
+        expect(targets[6].promptText, 'SEE THE SEA');
+        expect(targets[4].assessmentModel.age, 6);
+        expect(targets.map((t) => t.id).toSet(), hasLength(targets.length));
+        expect(() => targets.clear(), throwsUnsupportedError);
+      },
+    );
 
     test('appends a period only when the sentence lacks one', () {
       final module = LearningModuleModel(
@@ -72,9 +100,16 @@ void main() {
         outlineId: 'o',
         outlineTitle: 't',
         levels: const [
-          ModuleLevelModel(level: 'sentence', items: [
-            PracticeItemModel(text: 'I see a sock', targetSound: '', position: ''),
-          ]),
+          ModuleLevelModel(
+            level: 'sentence',
+            items: [
+              PracticeItemModel(
+                text: 'I see a sock',
+                targetSound: '',
+                position: '',
+              ),
+            ],
+          ),
         ],
         rationale: '',
         generatedBy: 'llm',
@@ -82,7 +117,6 @@ void main() {
       final targets = LearningModuleTargets.targetsFor(
         module: module,
         childAge: 5,
-        count: 1,
       );
       expect(targets.single.promptText, 'I see a sock.');
     });
@@ -91,15 +125,17 @@ void main() {
       final targets = LearningModuleTargets.targetsFor(
         module: _module(),
         childAge: 5,
-        count: 8,
       );
-      expect(
-        targets.map((t) => t.assessmentModel.displayWord).toList(),
-        [
-          'sa', 'see', 'so', 'si', 'sea', 'sun', 'see the sea',
-          'I see a sock.',
-        ],
-      );
+      expect(targets.map((t) => t.assessmentModel.displayWord).toList(), [
+        'sa',
+        'see',
+        'so',
+        'si',
+        'sea',
+        'sun',
+        'see the sea',
+        'I see a sock.',
+      ]);
     });
 
     test('returns empty for a module with no items', () {
@@ -114,11 +150,7 @@ void main() {
         generatedBy: 'llm',
       );
       expect(
-        LearningModuleTargets.targetsFor(
-          module: module,
-          childAge: 5,
-          count: 5,
-        ),
+        LearningModuleTargets.targetsFor(module: module, childAge: 5),
         isEmpty,
       );
     });

@@ -6,9 +6,9 @@ import 'game_target.dart';
 
 /// Loads the fallback game targets from `assets/data/game_targets.csv`.
 ///
-/// The CSV records every target across the four module levels (syllable,
-/// word, phrase, sentence — in order) with its paired image/audio assets.
-/// This is the fallback source used when no learning module exists.
+/// Retains the legacy content/asset inventory, not a new-stage curriculum.
+/// Some phrase rows pair a full prompt with single-word audio/assessment;
+/// future callers must validate suitability before configuring a game.
 class GameTargetCatalog {
   static const String csvAsset = 'assets/data/game_targets.csv';
   static const int fallbackAge = 4;
@@ -30,21 +30,24 @@ class GameTargetCatalog {
         final apiWord = row[3];
         final sourceWord = row.length > 8 ? row[8] : apiWord;
 
-        targets.add(GameTarget(
-          id: id,
-          promptText: promptText,
-          focusText: apiWord,
-          imageAssetPath: _nullable(row, 6),
-          audioAssetPath: _nullable(row, 7),
-          assessmentModel: ScreeningWordModel(
+        targets.add(
+          GameTarget(
             id: id,
-            audioId: sourceWord,
-            displayWord: apiWord,
-            age: fallbackAge,
+            promptText: promptText,
+            focusText: apiWord,
+            imageAssetPath: _nullable(row, 6),
+            audioAssetPath: _nullable(row, 7),
+            targetSound: _nullable(row, 5),
+            assessmentModel: ScreeningWordModel(
+              id: id,
+              audioId: sourceWord,
+              displayWord: apiWord,
+              age: fallbackAge,
+            ),
           ),
-        ));
+        );
       }
-      return targets;
+      return List.unmodifiable(targets);
     } catch (error) {
       debugPrint('[game-catalog] load_failed error=$error');
       return const [];

@@ -12,8 +12,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
 import '../../models/learning_report_model.dart';
 import '../../models/profile_model.dart';
-import '../../features/game/presentation/game_screen.dart';
-import '../../services/audio_recording_service.dart';
+import '../../features/game/presentation/gameplay_unavailable_page.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/voyage_loading_screen.dart';
 import 'child_profile_page.dart';
@@ -59,30 +58,12 @@ class _HomePageState extends State<HomePage>
   }
 
   Future<void> _completeInitialLoading() async {
-    await Future.wait([
-      Future<void>.delayed(const Duration(milliseconds: 850)),
-      _warmUpMicrophonePermission(),
-    ]);
+    await Future<void>.delayed(const Duration(milliseconds: 850));
 
     if (!mounted) return;
     setState(() {
       _isInitialLoading = false;
     });
-  }
-
-  Future<void> _warmUpMicrophonePermission() async {
-    final recordingService = AudioRecordingService();
-    try {
-      final ready = await recordingService.initialize();
-      debugPrint(
-        '[home] microphone_warmup ready=$ready '
-        'has_permission=${recordingService.hasMicPermission}',
-      );
-    } catch (error) {
-      debugPrint('[home] microphone_warmup_error error=$error');
-    } finally {
-      await recordingService.dispose();
-    }
   }
 
   @override
@@ -97,7 +78,7 @@ class _HomePageState extends State<HomePage>
 
     if (_isInitialLoading) {
       return const VoyageLoadingScreen(
-        message: 'Preparing microphone\nand learning map...',
+        message: 'Preparing your\nlearning map...',
       );
     }
 
@@ -144,38 +125,22 @@ class _SkyIslandHomeViewState extends State<_SkyIslandHomeView> {
   static const int _islandOneTotalLevels = 4;
 
   late final ScrollController _scrollController;
-  final Map<int, int> _localIslandOneAccuracies = {};
   ProfileModel? _selectedProfileOverride;
   int _currentIsland = 0;
 
   ProfileModel get _activeProfile => _selectedProfileOverride ?? widget.profile;
-
-  LearningReportData get _localReportData {
-    return LearningReportData(
-      levelScores: _localIslandOneAccuracies.entries
-          .map(
-            (entry) => LearningReportLevelScore(
-              activityIndex: 0,
-              levelIndex: entry.key,
-              accuracy: entry.value,
-              completedAt: DateTime.now(),
-            ),
-          )
-          .toList(),
-    );
-  }
 
   List<_QuestProgress> _questsFor(LearningReportData reportData) {
     final completedCount = reportData.completedLevelsForActivity(0).length;
 
     return [
       _QuestProgress(
-        title: 'Activity 1: The Sound Pop!',
+        title: 'Activity 1: Previous progress',
         levelsDone: completedCount,
         totalLevels: _islandOneTotalLevels,
       ),
       const _QuestProgress(
-        title: 'Activity 2: Word Splash!',
+        title: 'Activity 2: Coming next',
         levelsDone: 0,
         totalLevels: 4,
       ),
@@ -228,7 +193,6 @@ class _SkyIslandHomeViewState extends State<_SkyIslandHomeView> {
   }
 
   void _resetLocalProgress() {
-    _localIslandOneAccuracies.clear();
     _currentIsland = 0;
   }
 
@@ -274,9 +238,7 @@ class _SkyIslandHomeViewState extends State<_SkyIslandHomeView> {
 
   Future<void> _openChildProfile(ProfileModel profile) async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute(
-        builder: (_) => ChildProfilePage(profile: profile),
-      ),
+      MaterialPageRoute(builder: (_) => ChildProfilePage(profile: profile)),
     );
   }
 
@@ -297,36 +259,11 @@ class _SkyIslandHomeViewState extends State<_SkyIslandHomeView> {
     );
   }
 
-  Future<void> _openGameplayLevel(int levelIndex) async {
-    final activeProfile = _activeProfile;
-    final result = await Navigator.of(context).push<GameResult>(
-      MaterialPageRoute(
-        builder: (_) => GameScreen(
-          childProfileId: activeProfile.profileId,
-          childName: activeProfile.childName,
-          childAge: activeProfile.age,
-          levelIndex: levelIndex,
-          speechProfile: activeProfile.speechProfile,
-        ),
-      ),
+  Future<void> _openGameplayLevel(int _) async {
+    // Keep the existing map usable without interpreting legacy levels as stages.
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(builder: (_) => const GameplayUnavailablePage()),
     );
-
-    if (!mounted || result == null || !result.correct) return;
-
-    setState(() {
-      _localIslandOneAccuracies[result.levelIndex] = result.accuracy;
-    });
-
-    context
-        .read<HomeController>()
-        .saveGameplayLevelScore(
-          profile: activeProfile,
-          levelIndex: result.levelIndex,
-          accuracy: result.accuracy,
-        )
-        .catchError((error) {
-          debugPrint('Saving gameplay level score failed: $error');
-        });
   }
 
   @override
@@ -339,9 +276,7 @@ class _SkyIslandHomeViewState extends State<_SkyIslandHomeView> {
         activeProfile,
       ),
       builder: (context, snapshot) {
-        final reportData = (snapshot.data ?? LearningReportData.empty).merge(
-          _localReportData,
-        );
+        final reportData = snapshot.data ?? LearningReportData.empty;
         final quests = _questsFor(reportData);
         final currentQuest = quests[_currentIsland.clamp(0, quests.length - 1)];
         final completedIslandOneLevels = reportData.completedLevelsForActivity(

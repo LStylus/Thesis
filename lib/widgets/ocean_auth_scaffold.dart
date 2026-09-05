@@ -378,9 +378,9 @@ class FigmaWhaleMascot extends StatelessWidget {
       width: width,
       height: height,
       child: SvgPicture.asset(
-        AppAssets.whaleMascot,
+        AppAssets.childExplorer,
         fit: BoxFit.contain,
-        semanticsLabel: 'Voice Voyage whale mascot',
+        semanticsLabel: 'Voice Voyage child explorer',
       ),
     );
   }

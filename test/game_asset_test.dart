@@ -1,47 +1,65 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thesis/core/constants/app_assets.dart';
+import 'package:thesis/features/game/domain/game_target_catalog.dart';
 
 void main() {
-  testWidgets('the production game SVG set loads through Flutter', (
-    tester,
-  ) async {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
+  test(
+    'retained content assets exist on disk and in the current bundle',
+    () async {
+      final targets = await GameTargetCatalog.targets();
+      expect(targets, isNotEmpty);
+      expect(targets.first.targetSound, 'p');
+      expect(() => targets.clear(), throwsUnsupportedError);
+      final paths = <String>{
+        ..._svgAssets,
+        AppAssets.microphoneButton,
+        for (final target in targets) ...[
+          if (target.imageAssetPath != null) target.imageAssetPath!,
+          if (target.audioAssetPath != null) target.audioAssetPath!,
+        ],
+      };
+      for (final path in paths) {
+        // Disk check prevents an old test bundle from hiding deleted source assets.
+        expect(File(path).existsSync(), isTrue, reason: path);
+        expect(
+          (await rootBundle.load(path)).lengthInBytes,
+          greaterThan(0),
+          reason: path,
+        );
+      }
+    },
+  );
+
+  testWidgets('retained SVG artwork loads through Flutter', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         home: SingleChildScrollView(
           child: Wrap(
             children: [
-              for (final asset in _assets)
+              for (final asset in _svgAssets)
                 SizedBox.square(dimension: 72, child: SvgPicture.asset(asset)),
             ],
           ),
         ),
       ),
     );
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });
 }
 
-const _assets = [
-  'assets/game/adventure/game_sky_background.svg',
-  'assets/game/adventure/floating_school_island.svg',
-  'assets/game/adventure/passing_cloud.svg',
-  'assets/game/adventure/schoolhouse.svg',
-  'assets/game/adventure/child_explorer_idle.svg',
-  'assets/game/adventure/child_explorer_happy.svg',
-  'assets/game/adventure/sound_tile.svg',
-  'assets/game/adventure/sorting_bin_blue.svg',
-  'assets/game/adventure/sorting_bin_green.svg',
-  'assets/game/adventure/pop_target.svg',
-  'assets/game/adventure/pair_card.svg',
-  'assets/game/adventure/echo_crystal.svg',
-  'assets/game/adventure/stepping_stone.svg',
-  'assets/game/adventure/bridge_segment.svg',
-  'assets/game/adventure/sound_orb.svg',
-  'assets/game/adventure/meter_frame.svg',
-  'assets/game/adventure/reward_star.svg',
+const _svgAssets = [
+  AppAssets.childExplorer,
+  AppAssets.homeMapBackground,
+  AppAssets.passingCloud,
+  AppAssets.homeMapFlag,
   'assets/game/words/pig.svg',
   'assets/game/words/ball.svg',
   'assets/game/words/goat.svg',

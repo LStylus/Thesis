@@ -3,15 +3,14 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
-import '../game_scene_state.dart';
 
 class ProgressComponent extends PositionComponent {
   String _text = '';
 
   ProgressComponent() : super(anchor: Anchor.topRight, priority: 30);
 
-  void sync(GameSceneState state) {
-    _text = state.progressText;
+  void setProgress(String text) {
+    _text = text;
   }
 
   void layoutFor(Vector2 gameSize) {

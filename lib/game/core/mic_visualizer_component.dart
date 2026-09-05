@@ -4,28 +4,24 @@ import 'dart:ui' as ui;
 import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/constants/app_assets.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
-import '../game_scene.dart';
-import '../game_scene_state.dart';
 
-class MicVisualizerComponent extends PositionComponent
-    with HasGameReference<GameScene> {
-  GameSceneState _state = GameSceneState.initial();
+/// Draws supplied recording values without owning a recorder or game session.
+class MicVisualizerComponent extends PositionComponent {
+  bool recording = false;
+  bool checking = false;
+  bool visible = true;
+  double micLevel = 0;
+  double micProgress = 0;
+  int countdown = 0;
   double _time = 0;
-  ui.Image? _microphoneImage;
 
-  MicVisualizerComponent() : super(anchor: Anchor.center, priority: 28);
+  /// Borrowed from the owning scene's asset cache; that owner disposes it.
+  final ui.Image? microphoneImage;
 
-  @override
-  Future<void> onLoad() async {
-    _microphoneImage = await game.images.load(AppAssets.microphoneButtonFile);
-  }
-
-  void sync(GameSceneState state) {
-    _state = state;
-  }
+  MicVisualizerComponent({this.microphoneImage})
+    : super(anchor: Anchor.center, priority: 28);
 
   void layoutFor(Vector2 gameSize) {
     final visualSize = (gameSize.y * 0.20).clamp(72.0, 112.0).toDouble();
@@ -41,14 +37,12 @@ class MicVisualizerComponent extends PositionComponent
 
   @override
   void render(Canvas canvas) {
-    if (_state.phase == GamePhase.completed) return;
+    if (!visible) return;
 
     final center = Offset(size.x / 2, size.y / 2);
-    final recording = _state.phase == GamePhase.recording;
-    final checking = _state.phase == GamePhase.processing;
     final radius = size.x * 0.28;
     if (recording) {
-      final levelBoost = _state.micLevel * size.x * .08;
+      final levelBoost = micLevel.clamp(0.0, 1.0) * size.x * .08;
       final pulsePaint = Paint()
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2.8
@@ -89,7 +83,7 @@ class MicVisualizerComponent extends PositionComponent
       canvas.drawArc(
         ringRect,
         -math.pi / 2,
-        math.pi * 2 * _state.micProgress.clamp(0.0, 1.0),
+        math.pi * 2 * micProgress.clamp(0.0, 1.0),
         false,
         progressRing,
       );
@@ -112,7 +106,7 @@ class MicVisualizerComponent extends PositionComponent
       }
     }
 
-    final microphoneImage = _microphoneImage;
+    final microphoneImage = this.microphoneImage;
     if (microphoneImage != null) {
       final sourceSize = Size(
         microphoneImage.width.toDouble(),
@@ -120,8 +114,10 @@ class MicVisualizerComponent extends PositionComponent
       );
       final destinationBounds = Rect.fromCenter(
         center: center,
-        width: radius * (2.08 + (recording ? _state.micLevel * .12 : 0)),
-        height: radius * (2.08 + (recording ? _state.micLevel * .12 : 0)),
+        width:
+            radius * (2.08 + (recording ? micLevel.clamp(0.0, 1.0) * .12 : 0)),
+        height:
+            radius * (2.08 + (recording ? micLevel.clamp(0.0, 1.0) * .12 : 0)),
       );
       final fitted = applyBoxFit(
         BoxFit.contain,
@@ -165,9 +161,9 @@ class MicVisualizerComponent extends PositionComponent
           ..strokeWidth = 2.5
           ..isAntiAlias = true,
       );
-      final countdown = TextPainter(
+      final countdownPainter = TextPainter(
         text: TextSpan(
-          text: '${_state.countdown}',
+          text: '$countdown',
           style: const TextStyle(
             color: AppColors.primary,
             fontFamily: AppFonts.fredoka,
@@ -178,11 +174,11 @@ class MicVisualizerComponent extends PositionComponent
         ),
         textDirection: TextDirection.ltr,
       )..layout();
-      countdown.paint(
+      countdownPainter.paint(
         canvas,
         Offset(
-          badgeCenter.dx - countdown.width / 2,
-          badgeCenter.dy - countdown.height / 2,
+          badgeCenter.dx - countdownPainter.width / 2,
+          badgeCenter.dy - countdownPainter.height / 2,
         ),
       );
     }

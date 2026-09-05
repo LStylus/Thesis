@@ -425,18 +425,9 @@ class _VoyageArtPanel extends StatelessWidget {
       fit: StackFit.expand,
       children: [
         SvgPicture.asset(
-          'assets/game/adventure/game_sky_background.svg',
+          'assets/backgrounds/MAIN SCREEN.svg',
           fit: BoxFit.cover,
           alignment: const Alignment(0.08, 0),
-        ),
-        Positioned(
-          left: dense ? -40 : -20,
-          right: dense ? -80 : -50,
-          bottom: dense ? -28 : -44,
-          child: SvgPicture.asset(
-            'assets/game/adventure/floating_school_island.svg',
-            fit: BoxFit.contain,
-          ),
         ),
         const ColoredBox(color: Color(0x12004E68)),
         SafeArea(
@@ -500,7 +491,7 @@ class _VoyageArtPanel extends StatelessWidget {
                     width: dense ? 138 : (compact ? 170 : 245),
                     height: dense ? 96 : (compact ? 122 : 176),
                     child: SvgPicture.asset(
-                      'assets/game/adventure/child_explorer_happy.svg',
+                      'assets/characters/boy.svg',
                       fit: BoxFit.contain,
                       semanticsLabel: 'Voice Voyage child explorer',
                     ),

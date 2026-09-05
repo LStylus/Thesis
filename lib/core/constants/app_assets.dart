@@ -1,5 +1,5 @@
 class AppAssets {
-  static const String whaleMascot = 'assets/characters/whale.svg';
+  static const String childExplorer = 'assets/characters/boy.svg';
 
   static const String homeMapBackground = 'assets/backgrounds/MAIN SCREEN.svg';
   static const String passingCloud = 'assets/props/clouds.svg';

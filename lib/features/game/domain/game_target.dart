@@ -1,5 +1,6 @@
 import '../../../models/screening_word_model.dart';
 
+/// Reusable speech content, not a mechanic's choices, pieces, or answer key.
 class GameTarget {
   final String id;
   final String promptText;
@@ -7,9 +8,11 @@ class GameTarget {
   final String? imageAssetPath;
   final String? audioAssetPath;
   final ScreeningWordModel assessmentModel;
-  final List<String> pieces;
-  final List<String> options;
-  final int correctOptionIndex;
+  final String? targetSound;
+  final String? soundPosition;
+
+  /// Source speech unit (e.g. word or phrase), never a five-stage assignment.
+  final String? contentUnit;
 
   const GameTarget({
     required this.id,
@@ -18,8 +21,8 @@ class GameTarget {
     required this.assessmentModel,
     this.imageAssetPath,
     this.audioAssetPath,
-    this.pieces = const [],
-    this.options = const [],
-    this.correctOptionIndex = 0,
+    this.targetSound,
+    this.soundPosition,
+    this.contentUnit,
   });
 }

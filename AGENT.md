@@ -55,7 +55,8 @@ for Firestore serialization.
 | `lib/controllers/` | ChangeNotifier state managers: AuthController, HomeController, ScreeningController |
 | `lib/models/` | Data models: AppUserModel, ProfileModel, ScreeningWordModel, LearningModuleModel, LearningReportModel, SignupDraftModel |
 | `lib/services/` | Firebase auth (AuthService), Firestore CRUD (UserService), audio recording (AudioRecordingService), phoneme API client (PhonemeAssessmentService), modules API client (DynamicModulesService) |
-| `lib/features/` | Feature-first modules: `screening/` (application controllers), `game/` (domain config, application flows, presentation) |
+| `lib/features/` | Feature-first modules: `screening/` (application controllers), `game/` (stage/design metadata, content, preserved speech adapters, navigation notice) |
+| `lib/game/core/` | Reusable Flame microphone, feedback, progress and prompt visuals; no playable games yet |
 | `lib/views/` | Screens grouped by feature: `auth/`, `home/`, `screening/` |
 | `lib/widgets/` | Shared reusable widgets |
 | `lib/core/constants/` | Design tokens + `TestingDefaults` (word limit, test credentials) |
@@ -72,12 +73,16 @@ for Firestore serialization.
 - `ScreeningController` (ChangeNotifier) is created per-session with the
   child's age; words resolved via `ScreeningWordModel.resolveForAge(age)`
 
-**2. Gameplay** (`lib/features/game/`):
-- Ocean-map level-based learning; 4 levels per island: Bubble Bay
-  (syllables), Coral Cargo (single words), Reef Route (short phrases),
-  Captain's Call (full sentences) — see `domain/game_level_config.dart`
-- Records → assesses via the phoneme service → saves scores to Firestore
-  learning report (`GameSessionController`, `game_session_flow.dart`)
+**2. Gameplay preparation** (`lib/features/game/` + `lib/game/core/`):
+- Previous gameplay implementations and template-dependent session flow removed.
+- Five learning stages: Listen, Recognize, Guided Say, Independent Say, Use in Context.
+  Fifteen designs are catalogued but **not implemented or integrated**.
+- Stage 1–2 need no speech; stage 3–5 must require speech for meaningful progress.
+  Backend syllable/word/phrase/sentence units are not these learning stages.
+- Map nodes open a neutral notice. Historical reports and score-saving APIs are
+  preserved; no new gameplay results are written by the notice.
+- See `docs/gameplay_reset_architecture_study.md` before implementing games,
+  personalization, content validation, speech orchestration or persistence changes.
 
 ### State Management
 - Provider + ChangeNotifier via `MultiProvider` in `main.dart`
@@ -85,7 +90,8 @@ for Firestore serialization.
 - `HomeController` (profile streams + gameplay score saving)
 - `ScreeningController` (per-session, created in-line via `ChangeNotifierProvider`)
 - `ScreeningResultsController` (batch assessment + learning module request)
-- `GameSessionController` (per-level recording/assessment, retry logic)
+- A new shared gameplay session controller is future work; do not reintroduce
+  retired template/level rules or create a separate recording stack per game.
 
 ### Firebase Schema
 - `users/{userId}` — parent account (role, child profile IDs, active profile, learning report data)
@@ -130,5 +136,6 @@ for Firestore serialization.
 - `TestingDefaults` also contains test credentials and sample data
 
 ## Platform Locking
-- Home and Gameplay lock to landscape; Screening and Auth screens lock to portrait
+- Home locks to landscape; the gameplay notice inherits Home's orientation.
+  Screening and Auth screens lock to portrait.
 - Orientation resets on dispose via `SystemChrome.setPreferredOrientations`

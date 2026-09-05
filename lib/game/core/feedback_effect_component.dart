@@ -4,26 +4,16 @@ import 'package:flame/components.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
-import '../game_scene_state.dart';
 
 class FeedbackEffectComponent extends PositionComponent {
   final math.Random _random = math.Random(7);
   final List<_FeedbackParticle> _particles = [];
-  GamePhase _lastPhase = GamePhase.loading;
 
   FeedbackEffectComponent() : super(priority: 50);
 
-  void sync(GameSceneState state) {
-    if (state.phase == _lastPhase) return;
-    _lastPhase = state.phase;
-
-    if (state.phase == GamePhase.correct ||
-        state.phase == GamePhase.completed) {
-      _burst(success: true);
-    } else if (state.phase == GamePhase.retry ||
-        state.phase == GamePhase.invalidAudio) {
-      _burst(success: false);
-    }
+  /// Presentation-only feedback; the owning session decides when it is earned.
+  void showFeedback({required bool success}) {
+    _burst(success: success);
   }
 
   void layoutFor(Vector2 gameSize) {

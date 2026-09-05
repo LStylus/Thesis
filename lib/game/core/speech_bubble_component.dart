@@ -3,17 +3,16 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_fonts.dart';
-import '../game_scene_state.dart';
 
 class SpeechBubbleComponent extends PositionComponent {
   String _text = '';
-  GamePhase _phase = GamePhase.loading;
+  bool _isError = false;
 
   SpeechBubbleComponent() : super(anchor: Anchor.center, priority: 20);
 
-  void sync(GameSceneState state) {
-    _text = state.speechText;
-    _phase = state.phase;
+  void setMessage(String text, {bool isError = false}) {
+    _text = text;
+    _isError = isError;
   }
 
   void layoutFor(Vector2 gameSize) {
@@ -35,12 +34,7 @@ class SpeechBubbleComponent extends PositionComponent {
     canvas.drawRRect(bubble.shift(const Offset(0, 6)), shadow);
     canvas.drawRRect(bubble, fill);
 
-    final color =
-        _phase == GamePhase.retry ||
-            _phase == GamePhase.invalidAudio ||
-            _phase == GamePhase.error
-        ? AppColors.error
-        : const Color(0xFF3F5F73);
+    final color = _isError ? AppColors.error : const Color(0xFF3F5F73);
     var fontSize = 18.0;
     late TextPainter painter;
     do {

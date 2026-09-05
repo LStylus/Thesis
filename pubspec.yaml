@@ -41,6 +41,8 @@ flutter:
   assets:
     - assets/audio/screening/
     - assets/audio/main_audio/
+    - assets/audio/main_audio/main-content-audio/
+    - assets/audio/main_audio/prompt_voice/
     - assets/data/
     - assets/backgrounds/
     - assets/characters/
@@ -48,7 +50,6 @@ flutter:
     - assets/icons/
     - assets/profiles/
     - assets/props/
-    - assets/game/adventure/
     - assets/game/words/
 
   fonts:

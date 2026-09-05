@@ -53,7 +53,7 @@ class _VoyageLoadingScreenState extends State<VoyageLoadingScreen>
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   SvgPicture.asset(
-                    AppAssets.whaleMascot,
+                    AppAssets.childExplorer,
                     width: mascotWidth,
                     height: mascotWidth * 0.6,
                     fit: BoxFit.contain,
