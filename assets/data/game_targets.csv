@@ -1,17 +1,17 @@
 level,id,prompt_text,api_word,phonemes,target_sound,image_asset,audio_asset,source_word
-bubble_bay,pa,PA,pa,"p,ɑ",p,assets/game/words/pig.svg,assets/audio/main_audio/main-content-audio/pig.mp3,pig
-bubble_bay,ba,BA,ba,"b,ɑ",b,assets/game/words/ball.svg,assets/audio/main_audio/main-content-audio/ball.mp3,ball
-bubble_bay,ta,TA,ta,"t,ɑ",t,assets/game/words/10.svg,assets/audio/main_audio/main-content-audio/ten.mp3,ten
-bubble_bay,ka,KA,ka,"k,ɑ",k,assets/game/words/key.svg,assets/audio/main_audio/main-content-audio/key.mp3,key
-coral_cargo,pig,PIG,pig,"p,ɪ,ɡ",p,assets/game/words/pig.svg,assets/audio/main_audio/main-content-audio/pig.mp3,pig
-coral_cargo,ball,BALL,ball,"b,ɔ,l",b,assets/game/words/ball.svg,assets/audio/main_audio/main-content-audio/ball.mp3,ball
-coral_cargo,dog,DOG,dog,"d,ɔ,ɡ",d,assets/game/words/dog.svg,assets/audio/main_audio/main-content-audio/dog.mp3,dog
-coral_cargo,key,KEY,key,"k,i",k,assets/game/words/key.svg,assets/audio/main_audio/main-content-audio/key.mp3,key
-reef_route,big_pig,BIG PIG,pig,"p,ɪ,ɡ",p,assets/game/words/pig.svg,assets/audio/main_audio/main-content-audio/pig.mp3,pig
-reef_route,blue_ball,BLUE BALL,ball,"b,ɔ,l",b,assets/game/words/ball.svg,assets/audio/main_audio/main-content-audio/ball.mp3,ball
-reef_route,my_dog,MY DOG,dog,"d,ɔ,ɡ",d,assets/game/words/dog.svg,assets/audio/main_audio/main-content-audio/dog.mp3,dog
-reef_route,small_goat,SMALL GOAT,goat,"ɡ,oʊ,t",ɡ,assets/game/words/goat.svg,assets/audio/main_audio/main-content-audio/goat.mp3,goat
-captains_call,i_see_a_pig,I SEE A PIG.,pig,"p,ɪ,ɡ",p,assets/game/words/pig.svg,assets/audio/main_audio/main-content-audio/pig.mp3,pig
-captains_call,i_found_a_key,I FOUND A KEY.,key,"k,i",k,assets/game/words/key.svg,assets/audio/main_audio/main-content-audio/key.mp3,key
-captains_call,this_is_my_ball,THIS IS MY BALL.,ball,"b,ɔ,l",b,assets/game/words/ball.svg,assets/audio/main_audio/main-content-audio/ball.mp3,ball
-captains_call,i_see_a_goat,I SEE A GOAT.,goat,"ɡ,oʊ,t",ɡ,assets/game/words/goat.svg,assets/audio/main_audio/main-content-audio/goat.mp3,goat
+bubble_bay,pa,PA,pa,"p,ɑ",p,assets/game/words/pig.svg,,pig
+bubble_bay,ba,BA,ba,"b,ɑ",b,assets/game/words/ball.svg,,ball
+bubble_bay,ta,TA,ta,"t,ɑ",t,assets/game/words/10.svg,,ten
+bubble_bay,ka,KA,ka,"k,ɑ",k,assets/game/words/key.svg,,key
+coral_cargo,pig,PIG,pig,"p,ɪ,ɡ",p,assets/game/words/pig.svg,,pig
+coral_cargo,ball,BALL,ball,"b,ɔ,l",b,assets/game/words/ball.svg,,ball
+coral_cargo,dog,DOG,dog,"d,ɔ,ɡ",d,assets/game/words/dog.svg,,dog
+coral_cargo,key,KEY,key,"k,i",k,assets/game/words/key.svg,,key
+reef_route,big_pig,BIG PIG,pig,"p,ɪ,ɡ",p,assets/game/words/pig.svg,,pig
+reef_route,blue_ball,BLUE BALL,ball,"b,ɔ,l",b,assets/game/words/ball.svg,,ball
+reef_route,my_dog,MY DOG,dog,"d,ɔ,ɡ",d,assets/game/words/dog.svg,,dog
+reef_route,small_goat,SMALL GOAT,goat,"ɡ,oʊ,t",ɡ,assets/game/words/goat.svg,,goat
+captains_call,i_see_a_pig,I SEE A PIG.,pig,"p,ɪ,ɡ",p,assets/game/words/pig.svg,,pig
+captains_call,i_found_a_key,I FOUND A KEY.,key,"k,i",k,assets/game/words/key.svg,,key
+captains_call,this_is_my_ball,THIS IS MY BALL.,ball,"b,ɔ,l",b,assets/game/words/ball.svg,,ball
+captains_call,i_see_a_goat,I SEE A GOAT.,goat,"ɡ,oʊ,t",ɡ,assets/game/words/goat.svg,,goat

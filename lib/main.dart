@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,16 @@ import 'controllers/home_controller.dart';
 import 'core/constants/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
+import 'features/game/presentation/picture_listen_preview_page.dart';
+import 'features/game/presentation/gameplay_gallery_page.dart';
+import 'features/game/presentation/sound_emphasis_preview_page.dart';
+import 'features/game/presentation/falling_sound_bubbles_preview_page.dart';
+import 'features/game/presentation/find_the_word_preview_page.dart';
+import 'features/game/presentation/find_the_sound_preview_page.dart';
+import 'features/game/presentation/sound_bucket_preview_page.dart';
+import 'features/game/presentation/build_and_say_preview_page.dart';
+import 'features/game/presentation/guided_training_path_preview_page.dart';
+import 'features/game/presentation/listen_pop_repeat_preview_page.dart';
 import 'views/auth/auth_gate.dart';
 
 Future<void> main() async {
@@ -18,6 +29,96 @@ Future<void> main() async {
     DeviceOrientation.landscapeRight,
   ]);
 
+  // Open artwork previews directly, without initializing account services.
+  final previewRoutes = <String, WidgetBuilder>{
+    ListenPopRepeatPreviewPage.routeName: (context) => _previewWithBack(
+      context,
+      'Listen, Pop & Repeat',
+      const ListenPopRepeatPreviewPage(),
+    ),
+    GuidedTrainingPathPreviewPage.routeName: (context) => _previewWithBack(
+      context,
+      'Guided Training Path',
+      const GuidedTrainingPathPreviewPage(),
+    ),
+    SoundBucketPreviewPage.routeName: (context) => _previewWithBack(
+      context,
+      'Sound Bucket',
+      const SoundBucketPreviewPage(),
+    ),
+    BuildAndSayPreviewPage.routeName: (context) => _previewWithBack(
+      context,
+      'Build & Say',
+      const BuildAndSayPreviewPage(),
+    ),
+    FindTheSoundPreviewPage.routeName: (context) => Scaffold(
+      appBar: AppBar(
+        title: const Text('Find the Sound'),
+        leading: IconButton(
+          tooltip: 'Back to gameplay templates',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(
+            context,
+          ).pushReplacementNamed(GameplayGalleryPage.routeName),
+        ),
+      ),
+      body: const FindTheSoundPreviewPage(),
+    ),
+    FindTheWordPreviewPage.routeName: (context) => Scaffold(
+      appBar: AppBar(
+        title: const Text('Find the Word'),
+        leading: IconButton(
+          tooltip: 'Back to gameplay templates',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(
+            context,
+          ).pushReplacementNamed(GameplayGalleryPage.routeName),
+        ),
+      ),
+      body: const FindTheWordPreviewPage(),
+    ),
+    FallingSoundBubblesPreviewPage.routeName: (_) =>
+        const FallingSoundBubblesPreviewPage(),
+    SoundEmphasisPreviewPage.routeName: (_) => const SoundEmphasisPreviewPage(),
+    PictureListenPreviewPage.routeName: (_) => const PictureListenPreviewPage(),
+    GameplayGalleryPage.routeName: (_) => GameplayGalleryPage(
+      onBackToMain: () {
+        runApp(
+          const MaterialApp(
+            key: ValueKey('starting-main-app'),
+            initialRoute: '/',
+            debugShowCheckedModeBanner: false,
+            home: Scaffold(body: Center(child: CircularProgressIndicator())),
+          ),
+        );
+        _startMainApplication();
+      },
+    ),
+  };
+  final initialRoute =
+      WidgetsBinding.instance.platformDispatcher.defaultRouteName;
+  if (kDebugMode && previewRoutes.containsKey(initialRoute)) {
+    runApp(
+      MaterialApp(
+        title: 'Voice Voyage Previews',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        onGenerateInitialRoutes: (_) => [
+          MaterialPageRoute<void>(
+            settings: RouteSettings(name: initialRoute),
+            builder: previewRoutes[initialRoute]!,
+          ),
+        ],
+        routes: previewRoutes,
+      ),
+    );
+    return;
+  }
+
+  await _startMainApplication();
+}
+
+Future<void> _startMainApplication() async {
   Object? firebaseError;
   try {
     await Firebase.initializeApp(
@@ -39,6 +140,21 @@ Future<void> main() async {
   );
 }
 
+Widget _previewWithBack(BuildContext context, String title, Widget child) =>
+    Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        leading: IconButton(
+          tooltip: 'Back to gameplay templates',
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(
+            context,
+          ).pushReplacementNamed(GameplayGalleryPage.routeName),
+        ),
+      ),
+      body: child,
+    );
+
 class VoiceVoyageApp extends StatelessWidget {
   final Object? firebaseInitError;
 
@@ -48,6 +164,8 @@ class VoiceVoyageApp extends StatelessWidget {
   Widget build(BuildContext context) {
     if (firebaseInitError != null) {
       return MaterialApp(
+        key: const ValueKey('main-app-error'),
+        initialRoute: '/',
         title: 'Voice Voyage',
         debugShowCheckedModeBanner: false,
         home: _FirebaseErrorScreen(error: firebaseInitError!),
@@ -55,6 +173,8 @@ class VoiceVoyageApp extends StatelessWidget {
     }
 
     return MaterialApp(
+      key: const ValueKey('main-app'),
+      initialRoute: '/',
       title: 'Voice Voyage',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
@@ -100,7 +220,7 @@ class _FirebaseErrorScreen extends StatelessWidget {
                   ),
                   onPressed: () {
                     // Allow restarting the app programmatically
-                    main();
+                    _startMainApplication();
                   },
                   child: const Text('Retry'),
                 ),

@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
 
 import '../models/screening_word_model.dart';
@@ -14,7 +13,6 @@ class ScreeningController extends ChangeNotifier {
 
   final int childAge;
 
-  final AudioPlayer _player = AudioPlayer();
   final AudioRecordingService _recordingService = AudioRecordingService();
   final PhonemeAssessmentService _assessmentService =
       PhonemeAssessmentService();
@@ -26,7 +24,7 @@ class ScreeningController extends ChangeNotifier {
   int _currentIndex = 0;
 
   bool isRecording = false;
-  bool isPromptPlaying = false;
+
   bool isProcessing = false;
   bool hasMicPermission = false;
   bool isRecorderReady = false;
@@ -38,8 +36,6 @@ class ScreeningController extends ChangeNotifier {
   Timer? _recordingProgressTimer;
 
   String? errorMessage;
-
-  StreamSubscription<PlayerState>? _playerStateSub;
 
   static const Duration _autoRecordDuration =
       AudioRecordingService.defaultRecordDuration;
@@ -56,11 +52,6 @@ class ScreeningController extends ChangeNotifier {
   Future<void> _init() async {
     debugPrint('[screening] init child_age=$childAge words=${_words.length}');
     await _initRecorder();
-
-    _playerStateSub = _player.onPlayerStateChanged.listen((state) {
-      isPromptPlaying = state == PlayerState.playing;
-      notifyListeners();
-    });
 
     notifyListeners();
   }
@@ -110,13 +101,8 @@ class ScreeningController extends ChangeNotifier {
   bool get hasRecording => _recordingsByWordId.containsKey(currentWord.id);
   String? get currentRecordingPath => _recordingsByWordId[currentWord.id];
 
-  bool get canPlayPrompt => !isPromptPlaying && !isRecording && !isProcessing;
   bool get canRecord =>
-      hasMicPermission &&
-      isRecorderReady &&
-      !isPromptPlaying &&
-      !isRecording &&
-      !isProcessing;
+      hasMicPermission && isRecorderReady && !isRecording && !isProcessing;
 
   void clearError() {
     if (errorMessage == null) return;
@@ -128,20 +114,6 @@ class ScreeningController extends ChangeNotifier {
     hasMicPermission = false;
     isRecorderReady = false;
     await _initRecorder();
-  }
-
-  Future<void> playPromptAudio() async {
-    if (!canPlayPrompt) return;
-
-    clearError();
-
-    try {
-      await _player.stop();
-      await _player.play(AssetSource(currentWord.audioAssetPath));
-    } catch (_) {
-      errorMessage = 'Could not play the prompt audio.';
-      notifyListeners();
-    }
   }
 
   Future<void> startTimedRecording() async {
@@ -170,8 +142,6 @@ class ScreeningController extends ChangeNotifier {
     final attempt = ++_recordingAttempt;
 
     try {
-      await _player.stop();
-
       isRecording = true;
       isProcessing = false;
       recordingProgress = 0;
@@ -320,8 +290,6 @@ class ScreeningController extends ChangeNotifier {
         await stopRecording();
       }
 
-      await _player.stop();
-
       final existingPath = _recordingsByWordId[currentWord.id];
       if (existingPath != null) {
         final file = File(existingPath);
@@ -408,8 +376,6 @@ class ScreeningController extends ChangeNotifier {
         await _recordingService.cancel();
       }
 
-      await _player.stop();
-
       for (final path in _recordingsByWordId.values) {
         final file = File(path);
         if (await file.exists()) {
@@ -424,7 +390,7 @@ class ScreeningController extends ChangeNotifier {
       _assessmentResultsByWordId.clear();
       _currentIndex = 0;
       isRecording = false;
-      isPromptPlaying = false;
+
       isProcessing = false;
       recordingProgress = 0;
       recordingCountdown = _autoRecordDuration.inSeconds;
@@ -437,8 +403,7 @@ class ScreeningController extends ChangeNotifier {
   void dispose() {
     _recordingAttempt++;
     _stopRecordingProgressTimer();
-    _playerStateSub?.cancel();
-    _player.dispose();
+
     unawaited(_recordingService.dispose());
     super.dispose();
   }

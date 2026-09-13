@@ -301,10 +301,8 @@ class _ScreeningViewState extends State<_ScreeningView> {
     if (controller.hasRecording) {
       return 'Tap try again to replace your recording, or tap next to continue.';
     }
-    if (controller.isPromptPlaying) {
-      return 'Listen to the word, then tap the microphone to record.';
-    }
-    return 'Tap the speaker to hear the word, then tap the microphone to record';
+    return 'Say ${controller.currentWord.displayWord}. Tap the microphone to record. '
+        'Temporary captions replace voice-over.';
   }
 
   Widget _buildRecordingScreen(ScreeningController controller) {
@@ -403,17 +401,7 @@ class _ScreeningViewState extends State<_ScreeningView> {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              if (!hasRecording)
-                GlowAssetButton(
-                  assetPath: AppAssets.playButton,
-                  semanticsLabel: 'Play prompt',
-                  isActive: controller.isPromptPlaying,
-                  onTap: controller.canPlayPrompt
-                      ? controller.playPromptAudio
-                      : null,
-                  size: controlSize,
-                )
-              else
+              if (hasRecording)
                 GlowAssetButton(
                   assetPath: AppAssets.tryAgainButton,
                   semanticsLabel: 'Try again',
@@ -427,7 +415,7 @@ class _ScreeningViewState extends State<_ScreeningView> {
                         ),
                   size: controlSize,
                 ),
-              const SizedBox(width: 20),
+              if (hasRecording) const SizedBox(width: 20),
               if (controller.isProcessing)
                 RecordingMicButton(
                   isPending: false,

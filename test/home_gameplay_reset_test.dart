@@ -5,6 +5,7 @@ import 'package:thesis/controllers/home_controller.dart';
 import 'package:thesis/models/learning_report_model.dart';
 import 'package:thesis/models/profile_model.dart';
 import 'package:thesis/views/home/home_page.dart';
+import 'package:thesis/features/game/presentation/gameplay_gallery_page.dart';
 
 class _HomeController extends Fake implements HomeController {
   final profile = ProfileModel.fromMap(const {
@@ -45,8 +46,22 @@ class _HomeController extends Fake implements HomeController {
 }
 
 void main() {
+  testWidgets('standalone gallery Back returns through the main app callback', (
+    tester,
+  ) async {
+    var returnedToMain = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: GameplayGalleryPage(onBackToMain: () => returnedToMain = true),
+      ),
+    );
+    await tester.tap(find.byTooltip('Back to main screen'));
+    await tester.pump();
+    expect(returnedToMain, isTrue);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
-    'actual home map opens the notice without saving legacy progress',
+    'home map and template gallery navigation do not save legacy progress',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(1200, 540));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -69,6 +84,71 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('New gameplay system coming next.'), findsOneWidget);
       await tester.tap(find.text('Back to map'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Activity 1: Previous progress'), findsOneWidget);
+      await tester.tap(find.bySemanticsLabel('Customize'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Gameplay Templates'), findsOneWidget);
+      final availableTile = tester.widget<ListTile>(
+        find.ancestor(
+          of: find.text('Find the Word'),
+          matching: find.byType(ListTile),
+        ),
+      );
+      expect(availableTile.enabled, isTrue);
+      expect(availableTile.onTap, isNotNull);
+      await tester.tap(find.text('Find the Word'));
+      await tester.pumpAndSettle();
+      expect(find.text('Find the ball.'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Falling Sound Bubbles'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Watch the sound bubbles'), findsOneWidget);
+      for (var i = 1; i <= 3; i++) {
+        expect(find.byKey(ValueKey('sound-bubble-$i')), findsOneWidget);
+      }
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('Sound Emphasis'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Notice the sound'), findsOneWidget);
+      expect(find.text('Picture placeholder'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('Picture Listen'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      for (var i = 1; i <= 3; i++) {
+        expect(find.text('Image $i'), findsOneWidget);
+      }
+      await tester.pageBack();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.scrollUntilVisible(
+        find.text('Story Adventure'),
+        350,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('Story Adventure'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Find the Sound'),
+        -350,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.tap(find.text('Find the Sound'));
+      await tester.pumpAndSettle();
+      expect(find.text('Which picture starts with /b/?'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Gameplay Templates'), findsOneWidget);
+      await tester.tap(find.byTooltip('Back to main screen'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('Activity 1: Previous progress'), findsOneWidget);

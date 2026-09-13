@@ -11,6 +11,26 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
+    'caption-only mode has no prompt audio on disk or in the bundle',
+    () async {
+      final audioDirectory = Directory('assets/audio');
+      expect(
+        audioDirectory.existsSync()
+            ? audioDirectory.listSync(recursive: true).whereType<File>()
+            : const <File>[],
+        isEmpty,
+      );
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      expect(
+        manifest.listAssets().where((path) => path.startsWith('assets/audio/')),
+        isEmpty,
+      );
+      final targets = await GameTargetCatalog.targets();
+      expect(targets.every((target) => target.audioAssetPath == null), isTrue);
+    },
+  );
+
+  test(
     'retained content assets exist on disk and in the current bundle',
     () async {
       final targets = await GameTargetCatalog.targets();

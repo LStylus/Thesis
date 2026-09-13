@@ -1,6 +1,6 @@
 import 'game_stage.dart';
 
-/// Design catalog only. None of these entries has an implementation or route.
+/// Design catalog only. Runtime and preview availability live in presentation.
 /// IDs are explicit so future persistence need not depend on enum ordering.
 enum GameDefinition {
   pictureListen('picture_listen', 'Picture Listen', GameStage.listen),

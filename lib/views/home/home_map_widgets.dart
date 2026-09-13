@@ -236,14 +236,18 @@ class _MapIconButton extends StatelessWidget {
     return Semantics(
       label: label,
       button: true,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: SvgPicture.asset(
-          assetPath,
-          width: width,
-          height: height,
-          fit: BoxFit.contain,
+      enabled: onTap != null,
+      child: MouseRegion(
+        cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+        child: GestureDetector(
+          onTap: onTap,
+          behavior: HitTestBehavior.opaque,
+          child: SvgPicture.asset(
+            assetPath,
+            width: width,
+            height: height,
+            fit: BoxFit.contain,
+          ),
         ),
       ),
     );

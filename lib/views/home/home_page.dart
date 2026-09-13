@@ -13,6 +13,7 @@ import '../../core/constants/app_fonts.dart';
 import '../../models/learning_report_model.dart';
 import '../../models/profile_model.dart';
 import '../../features/game/presentation/gameplay_unavailable_page.dart';
+import '../../features/game/presentation/gameplay_gallery_page.dart';
 import '../../widgets/profile_avatar.dart';
 import '../../widgets/voyage_loading_screen.dart';
 import 'child_profile_page.dart';
@@ -346,11 +347,16 @@ class _SkyIslandHomeViewState extends State<_SkyIslandHomeView> {
                 Positioned(
                   right: compact ? 18 : 58,
                   bottom: padding.bottom + 24,
-                  child: const _MapIconButton(
+                  child: _MapIconButton(
                     assetPath: 'assets/icons/customize_button.svg',
                     label: 'Customize',
                     width: 63,
                     height: 73,
+                    onTap: () => Navigator.of(context).push<void>(
+                      MaterialPageRoute(
+                        builder: (_) => const GameplayGalleryPage(),
+                      ),
+                    ),
                   ),
                 ),
               ],

@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!-- Temporary vector explorer. Replace through characterAsset when art is ready. -->
+  <ellipse cx="49" cy="91" rx="25" ry="4" fill="#D7E1D3"/>
+  <rect x="19" y="40" width="21" height="31" rx="8" fill="#E8B963"/>
+  <path d="M38 67 L35 85 M56 67 L62 85" fill="none" stroke="#355C6C" stroke-width="11" stroke-linecap="round"/>
+  <path d="M29 88 H40 M58 88 H70" fill="none" stroke="#244653" stroke-width="9" stroke-linecap="round"/>
+  <rect x="31" y="39" width="34" height="33" rx="12" fill="#67BBB5"/>
+  <path d="M36 45 L30 62 M61 46 L70 57" fill="none" stroke="#F0C59E" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="49" cy="26" r="18" fill="#F0C59E"/>
+  <path d="M31 25 Q29 7 48 7 Q67 7 68 22 L53 20 L48 15 L42 23 Z" fill="#536B65"/>
+  <path d="M27 15 Q47 0 68 15 L70 20 H26 Z" fill="#E8B963"/>
+  <path d="M24 20 H74" stroke="#C99445" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="55" cy="28" r="2" fill="#244653"/>
+  <path d="M52 35 Q58 39 62 33" fill="none" stroke="#AC715C" stroke-width="2" stroke-linecap="round"/>
+  <path d="M40 42 L49 54 L57 42" fill="#FFF6DD"/>
+  <circle cx="49" cy="57" r="3" fill="#E8B963"/>
+</svg>

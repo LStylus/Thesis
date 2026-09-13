@@ -13,8 +13,6 @@ class ScreeningWordModel {
     required this.age,
   });
 
-  String get audioAssetPath => 'audio/screening/$audioId.mp3';
-
   static List<ScreeningWordModel> resolveForAge(int age) {
     if (age < 4 || age > 8) {
       throw ArgumentError('Supported age range is 4 to 8.');
